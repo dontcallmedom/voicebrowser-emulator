@@ -15,6 +15,7 @@ class VoiceXMLReader {
       throw new Exception('VoiceXML document not valid');
     }
     $this->_read();
+    return true;
   }
 
   protected function _read() {
@@ -46,6 +47,3 @@ class VoiceXMLReader {
     
   }
 }
-$v = new VoiceXMLReader();
-$xml = file_get_contents("test.vxml");
-$v->load($xml);

@@ -1,0 +1,1630 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  VoiceXML 2.0 DTD (20031213)
+  
+  Copyright 1998-2004 W3C (MIT, ERCIM, Keio), All Rights Reserved. 
+  
+  Permission to use, copy, modify and distribute the VoiceXML DTD and 
+  its accompanying documentation for any purpose and without fee is 
+  hereby granted in perpetuity, provided that the above copyright 
+  notice and this paragraph appear in all copies.  
+  
+  The copyright holders make no representation about the suitability 
+  of the DTD for any purpose. It is provided "as is" without expressed 
+  or implied warranty.
+-->
+<grammar ns="http://www.w3.org/2001/vxml" xmlns:a="http://relaxng.org/ns/compatibility/annotations/1.0" xmlns="http://relaxng.org/ns/structure/1.0" datatypeLibrary="http://www.w3.org/2001/XMLSchema-datatypes">
+  <define name="audio">
+    <choice>
+      <text/>
+      <ref name="audio.element"/>
+      <ref name="enumerate.element"/>
+      <ref name="value.element"/>
+    </choice>
+  </define>
+  <define name="bargeintype">
+    <choice>
+      <value>speech</value>
+      <value>hotword</value>
+    </choice>
+  </define>
+  <define name="boolean">
+    <choice>
+      <value>true</value>
+      <value>false</value>
+    </choice>
+  </define>
+  <define name="content.type">
+    <data type="string" datatypeLibrary=""/>
+  </define>
+  <define name="duration">
+    <data type="string" datatypeLibrary=""/>
+  </define>
+  <define name="event.handler">
+    <choice>
+      <ref name="catch.element"/>
+      <ref name="help.element"/>
+      <ref name="noinput.element"/>
+      <ref name="nomatch.element"/>
+      <ref name="error.element"/>
+    </choice>
+  </define>
+  <define name="event.name">
+    <data type="NMTOKEN"/>
+  </define>
+  <define name="event.names">
+    <data type="NMTOKENS"/>
+  </define>
+  <define name="executable.content">
+    <choice>
+      <ref name="audio"/>
+      <ref name="assign.element"/>
+      <ref name="clear.element"/>
+      <ref name="disconnect.element"/>
+      <ref name="exit.element"/>
+      <ref name="goto.element"/>
+      <ref name="if.element"/>
+      <ref name="log.element"/>
+      <ref name="prompt.element"/>
+      <ref name="reprompt.element"/>
+      <ref name="return.element"/>
+      <ref name="script.element"/>
+      <ref name="submit.element"/>
+      <ref name="throw.element"/>
+      <ref name="var.element"/>
+    </choice>
+  </define>
+  <define name="expression">
+    <data type="string" datatypeLibrary=""/>
+  </define>
+  <define name="restrictedvariable.name">
+    <data type="NMTOKEN"/>
+  </define>
+  <define name="variable.name">
+    <data type="string" datatypeLibrary=""/>
+  </define>
+  <define name="restrictedvariable.names">
+    <data type="NMTOKENS"/>
+  </define>
+  <define name="variable.names">
+    <data type="string" datatypeLibrary=""/>
+  </define>
+  <define name="integer">
+    <data type="string" datatypeLibrary=""/>
+  </define>
+  <define name="item.attrs">
+    <optional>
+      <attribute name="name">
+        <ref name="restrictedvariable.name"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="cond">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="expr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="uri">
+    <data type="string" datatypeLibrary=""/>
+  </define>
+  <define name="cache.attrs">
+    <optional>
+      <attribute name="fetchhint">
+        <choice>
+          <value>prefetch</value>
+          <value>safe</value>
+        </choice>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="fetchtimeout">
+        <ref name="duration"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="maxage">
+        <ref name="integer"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="maxstale">
+        <ref name="integer"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="next.attrs">
+    <optional>
+      <attribute name="next">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="expr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="submit.attrs">
+    <optional>
+      <attribute name="method" a:defaultValue="get">
+        <choice>
+          <value>get</value>
+          <value>post</value>
+        </choice>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="enctype" a:defaultValue="application/x-www-form-urlencoded">
+        <ref name="content.type"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="namelist">
+        <ref name="variable.names"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="throw.attrs">
+    <optional>
+      <attribute name="event">
+        <ref name="event.name"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="eventexpr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="message"/>
+    </optional>
+    <optional>
+      <attribute name="messageexpr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="variable">
+    <choice>
+      <ref name="block.element"/>
+      <ref name="field.element"/>
+      <ref name="var.element"/>
+    </choice>
+  </define>
+  <!-- ================================= Root ================================ -->
+  <define name="vxml.element">
+    <element name="vxml">
+      <ref name="vxml.attlist"/>
+      <oneOrMore>
+        <choice>
+          <ref name="event.handler"/>
+          <ref name="form.element"/>
+          <ref name="link.element"/>
+          <ref name="menu.element"/>
+          <ref name="meta.element"/>
+          <ref name="metadata.element"/>
+          <ref name="property.element"/>
+          <ref name="script.element"/>
+          <ref name="var.element"/>
+        </choice>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="vxml.attlist" combine="interleave">
+    <optional>
+      <attribute name="application">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:base">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <attribute name="version"/>
+  </define>
+  <define name="meta.element">
+    <element name="meta">
+      <ref name="meta.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="meta.attlist" combine="interleave">
+    <optional>
+      <attribute name="name">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <attribute name="content"/>
+    <optional>
+      <attribute name="http-equiv">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="metadata.element">
+    <element name="metadata">
+      <ref name="metadata.attlist"/>
+      <ref name="any"/>
+    </element>
+  </define>
+  <define name="metadata.attlist" combine="interleave">
+    <empty/>
+  </define>
+  <!-- ================================ Prompts ============================== -->
+  <!-- definitions adapted from SSML 1.0 DTD -->
+  <define name="structure">
+    <choice>
+      <ref name="p.element"/>
+      <ref name="s.element"/>
+    </choice>
+  </define>
+  <define name="sentence-elements">
+    <choice>
+      <ref name="break.element"/>
+      <ref name="emphasis.element"/>
+      <ref name="mark.element"/>
+      <ref name="phoneme.element"/>
+      <ref name="prosody.element"/>
+      <ref name="say-as.element"/>
+      <ref name="voice.element"/>
+      <ref name="sub.element"/>
+    </choice>
+  </define>
+  <!--
+    addition of enumerate and value elements as 'allowed-within-sentence' 
+    audio elements
+  -->
+  <define name="allowed-within-sentence">
+    <choice>
+      <ref name="audio"/>
+      <ref name="sentence-elements"/>
+    </choice>
+  </define>
+  <!--
+    Prompt is modelled on SSML 1.0 DTD speak element:
+    - addition of 'bargein', 'bargeintype', 'cond', 'count' and 'timeout' attributes
+    - removal of xmlns, xmlns:xsi, and xsi:schemaLocation attributes
+    - version attribute fixed as "1.0"
+  -->
+  <define name="prompt.element">
+    <element name="prompt">
+      <ref name="prompt.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="allowed-within-sentence"/>
+          <ref name="structure"/>
+          <ref name="lexicon.element"/>
+          <ref name="metadata.element"/>
+          <ref name="meta.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="prompt.attlist" combine="interleave">
+    <optional>
+      <attribute name="bargein">
+        <ref name="boolean"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="bargeintype">
+        <ref name="bargeintype"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="cond">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="count">
+        <ref name="integer"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="timeout">
+        <ref name="duration"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:base">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="version" a:defaultValue="1.0">
+        <value type="string" datatypeLibrary="">1.0</value>
+      </attribute>
+    </optional>
+  </define>
+  <define name="enumerate.element">
+    <element name="enumerate">
+      <ref name="enumerate.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="allowed-within-sentence"/>
+          <ref name="structure"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="enumerate.attlist" combine="interleave">
+    <empty/>
+  </define>
+  <define name="reprompt.element">
+    <element name="reprompt">
+      <ref name="reprompt.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="reprompt.attlist" combine="interleave">
+    <empty/>
+  </define>
+  <!-- ================================= Dialogs ============================= -->
+  <define name="input">
+    <ref name="grammar.element"/>
+  </define>
+  <define name="scope">
+    <choice>
+      <value>document</value>
+      <value>dialog</value>
+    </choice>
+  </define>
+  <define name="form.element">
+    <element name="form">
+      <ref name="form.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="input"/>
+          <ref name="event.handler"/>
+          <ref name="filled.element"/>
+          <ref name="initial.element"/>
+          <ref name="object.element"/>
+          <ref name="link.element"/>
+          <ref name="property.element"/>
+          <ref name="record.element"/>
+          <ref name="script.element"/>
+          <ref name="subdialog.element"/>
+          <ref name="transfer.element"/>
+          <ref name="variable"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="form.attlist" combine="interleave">
+    <optional>
+      <attribute name="id"/>
+    </optional>
+    <optional>
+      <attribute name="scope" a:defaultValue="dialog">
+        <ref name="scope"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="accept.attrs">
+    <optional>
+      <attribute name="accept" a:defaultValue="exact">
+        <choice>
+          <value>exact</value>
+          <value>approximate</value>
+        </choice>
+      </attribute>
+    </optional>
+  </define>
+  <define name="menu.element">
+    <element name="menu">
+      <ref name="menu.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="audio"/>
+          <ref name="choice.element"/>
+          <ref name="event.handler"/>
+          <ref name="prompt.element"/>
+          <ref name="property.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="menu.attlist" combine="interleave">
+    <optional>
+      <attribute name="id"/>
+    </optional>
+    <optional>
+      <attribute name="scope" a:defaultValue="dialog">
+        <ref name="scope"/>
+      </attribute>
+    </optional>
+    <ref name="accept.attrs"/>
+    <optional>
+      <attribute name="dtmf" a:defaultValue="false">
+        <ref name="boolean"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="choice.element">
+    <element name="choice">
+      <ref name="choice.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <text/>
+          <ref name="input"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="choice.attlist" combine="interleave">
+    <ref name="cache.attrs"/>
+    <optional>
+      <attribute name="accept">
+        <choice>
+          <value>exact</value>
+          <value>approximate</value>
+        </choice>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="dtmf"/>
+    </optional>
+    <ref name="throw.attrs"/>
+    <optional>
+      <attribute name="fetchaudio">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <ref name="next.attrs"/>
+  </define>
+  <!-- ================================ Audio Output ============================== -->
+  <!-- definitions adapted from SSML 1.0 DTD -->
+  <define name="p.element">
+    <element name="p">
+      <ref name="p.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="allowed-within-sentence"/>
+          <ref name="s.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="p.attlist" combine="interleave">
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="s.element">
+    <element name="s">
+      <ref name="s.attlist"/>
+      <zeroOrMore>
+        <ref name="allowed-within-sentence"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="s.attlist" combine="interleave">
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="voice.element">
+    <element name="voice">
+      <ref name="voice.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="allowed-within-sentence"/>
+          <ref name="structure"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="voice.attlist" combine="interleave">
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="gender">
+        <choice>
+          <value>male</value>
+          <value>female</value>
+          <value>neutral</value>
+        </choice>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="age">
+        <ref name="integer"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="variant">
+        <ref name="integer"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="name"/>
+    </optional>
+  </define>
+  <define name="prosody.element">
+    <element name="prosody">
+      <ref name="prosody.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="allowed-within-sentence"/>
+          <ref name="structure"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="prosody.attlist" combine="interleave">
+    <optional>
+      <attribute name="pitch"/>
+    </optional>
+    <optional>
+      <attribute name="contour"/>
+    </optional>
+    <optional>
+      <attribute name="range"/>
+    </optional>
+    <optional>
+      <attribute name="rate"/>
+    </optional>
+    <optional>
+      <attribute name="duration">
+        <ref name="duration"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="volume"/>
+    </optional>
+  </define>
+  <!--
+    Changes to SSML 1.0 DTD audio element:
+    - src not obligatory, addition of 'expr' and caching attributes
+  -->
+  <define name="audio.element">
+    <element name="audio">
+      <ref name="audio.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="allowed-within-sentence"/>
+          <ref name="structure"/>
+          <ref name="desc.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="audio.attlist" combine="interleave">
+    <optional>
+      <attribute name="src">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="expr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <ref name="cache.attrs"/>
+  </define>
+  <define name="desc.element">
+    <element name="desc">
+      <ref name="desc.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="desc.attlist" combine="interleave">
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="emphasis.element">
+    <element name="emphasis">
+      <ref name="emphasis.attlist"/>
+      <zeroOrMore>
+        <ref name="allowed-within-sentence"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="emphasis.attlist" combine="interleave">
+    <optional>
+      <attribute name="level" a:defaultValue="moderate">
+        <choice>
+          <value>strong</value>
+          <value>moderate</value>
+          <value>none</value>
+          <value>reduced</value>
+        </choice>
+      </attribute>
+    </optional>
+  </define>
+  <!--
+    Changes to SSML 1.0 DTD say-as element:
+    - allows value element as child
+  -->
+  <define name="say-as.element">
+    <element name="say-as">
+      <ref name="say-as.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <text/>
+          <ref name="value.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="say-as.attlist" combine="interleave">
+    <attribute name="interpret-as">
+      <data type="NMTOKEN"/>
+    </attribute>
+    <optional>
+      <attribute name="format">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="detail">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="sub.element">
+    <element name="sub">
+      <ref name="sub.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="sub.attlist" combine="interleave">
+    <attribute name="alias"/>
+  </define>
+  <define name="phoneme.element">
+    <element name="phoneme">
+      <ref name="phoneme.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="phoneme.attlist" combine="interleave">
+    <attribute name="ph"/>
+    <optional>
+      <attribute name="alphabet"/>
+    </optional>
+  </define>
+  <define name="break.element">
+    <element name="break">
+      <ref name="break.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="break.attlist" combine="interleave">
+    <optional>
+      <attribute name="time"/>
+    </optional>
+    <optional>
+      <attribute name="strength" a:defaultValue="medium">
+        <choice>
+          <value>none</value>
+          <value>x-weak</value>
+          <value>weak</value>
+          <value>medium</value>
+          <value>strong</value>
+          <value>x-strong</value>
+        </choice>
+      </attribute>
+    </optional>
+  </define>
+  <define name="mark.element">
+    <element name="mark">
+      <ref name="mark.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="mark.attlist" combine="interleave">
+    <attribute name="name"/>
+  </define>
+  <!-- ================================ Fields =============================== -->
+  <define name="field.element">
+    <element name="field">
+      <ref name="field.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="audio"/>
+          <ref name="event.handler"/>
+          <ref name="filled.element"/>
+          <ref name="input"/>
+          <ref name="link.element"/>
+          <ref name="option.element"/>
+          <ref name="prompt.element"/>
+          <ref name="property.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="field.attlist" combine="interleave">
+    <ref name="item.attrs"/>
+    <optional>
+      <attribute name="type"/>
+    </optional>
+    <optional>
+      <attribute name="slot">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="modal" a:defaultValue="false">
+        <ref name="boolean"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="option.element">
+    <element name="option">
+      <ref name="option.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="option.attlist" combine="interleave">
+    <ref name="accept.attrs"/>
+    <optional>
+      <attribute name="dtmf"/>
+    </optional>
+    <optional>
+      <attribute name="value"/>
+    </optional>
+  </define>
+  <define name="var.element">
+    <element name="var">
+      <ref name="var.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="var.attlist" combine="interleave">
+    <attribute name="name">
+      <ref name="restrictedvariable.name"/>
+    </attribute>
+    <optional>
+      <attribute name="expr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="initial.element">
+    <element name="initial">
+      <ref name="initial.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="audio"/>
+          <ref name="event.handler"/>
+          <ref name="link.element"/>
+          <ref name="prompt.element"/>
+          <ref name="property.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="initial.attlist" combine="interleave">
+    <ref name="item.attrs"/>
+  </define>
+  <define name="block.element">
+    <element name="block">
+      <ref name="block.attlist"/>
+      <zeroOrMore>
+        <ref name="executable.content"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="block.attlist" combine="interleave">
+    <ref name="item.attrs"/>
+  </define>
+  <define name="assign.element">
+    <element name="assign">
+      <ref name="assign.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="assign.attlist" combine="interleave">
+    <attribute name="name">
+      <ref name="variable.name"/>
+    </attribute>
+    <attribute name="expr">
+      <ref name="expression"/>
+    </attribute>
+  </define>
+  <define name="clear.element">
+    <element name="clear">
+      <ref name="clear.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="clear.attlist" combine="interleave">
+    <optional>
+      <attribute name="namelist">
+        <ref name="variable.names"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="value.element">
+    <element name="value">
+      <ref name="value.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="value.attlist" combine="interleave">
+    <attribute name="expr">
+      <ref name="expression"/>
+    </attribute>
+  </define>
+  <!-- ================================== Events ============================= -->
+  <define name="event.handler.attrs">
+    <optional>
+      <attribute name="count">
+        <ref name="integer"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="cond">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="catch.element">
+    <element name="catch">
+      <ref name="catch.attlist"/>
+      <zeroOrMore>
+        <ref name="executable.content"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="catch.attlist" combine="interleave">
+    <optional>
+      <attribute name="event">
+        <ref name="event.names"/>
+      </attribute>
+    </optional>
+    <ref name="event.handler.attrs"/>
+  </define>
+  <define name="error.element">
+    <element name="error">
+      <ref name="error.attlist"/>
+      <zeroOrMore>
+        <ref name="executable.content"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="error.attlist" combine="interleave">
+    <ref name="event.handler.attrs"/>
+  </define>
+  <define name="help.element">
+    <element name="help">
+      <ref name="help.attlist"/>
+      <zeroOrMore>
+        <ref name="executable.content"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="help.attlist" combine="interleave">
+    <ref name="event.handler.attrs"/>
+  </define>
+  <define name="link.element">
+    <element name="link">
+      <ref name="link.attlist"/>
+      <zeroOrMore>
+        <ref name="input"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="link.attlist" combine="interleave">
+    <ref name="cache.attrs"/>
+    <ref name="next.attrs"/>
+    <optional>
+      <attribute name="fetchaudio">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="dtmf"/>
+    </optional>
+    <ref name="throw.attrs"/>
+  </define>
+  <define name="noinput.element">
+    <element name="noinput">
+      <ref name="noinput.attlist"/>
+      <zeroOrMore>
+        <ref name="executable.content"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="noinput.attlist" combine="interleave">
+    <ref name="event.handler.attrs"/>
+  </define>
+  <define name="nomatch.element">
+    <element name="nomatch">
+      <ref name="nomatch.attlist"/>
+      <zeroOrMore>
+        <ref name="executable.content"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="nomatch.attlist" combine="interleave">
+    <ref name="event.handler.attrs"/>
+  </define>
+  <define name="throw.element">
+    <element name="throw">
+      <ref name="throw.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="throw.attlist" combine="interleave">
+    <ref name="throw.attrs"/>
+  </define>
+  <!-- ============================= Grammar Input ============================= -->
+  <!-- definitions adapted from SRGS 1.0 DTD -->
+  <define name="rule-expansion">
+    <choice>
+      <text/>
+      <ref name="token.element"/>
+      <ref name="ruleref.element"/>
+      <ref name="item.element"/>
+      <ref name="one-of.element"/>
+      <ref name="tag.element"/>
+    </choice>
+  </define>
+  <define name="ruleref.element">
+    <element name="ruleref">
+      <ref name="ruleref.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="ruleref.attlist" combine="interleave">
+    <optional>
+      <attribute name="uri">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="type"/>
+    </optional>
+    <optional>
+      <attribute name="special">
+        <choice>
+          <value>NULL</value>
+          <value>VOID</value>
+          <value>GARBAGE</value>
+        </choice>
+      </attribute>
+    </optional>
+  </define>
+  <define name="token.element">
+    <element name="token">
+      <ref name="token.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="token.attlist" combine="interleave">
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="tag.element">
+    <element name="tag">
+      <ref name="tag.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="tag.attlist" combine="interleave">
+    <empty/>
+  </define>
+  <define name="one-of.element">
+    <element name="one-of">
+      <ref name="one-of.attlist"/>
+      <oneOrMore>
+        <ref name="item.element"/>
+      </oneOrMore>
+    </element>
+  </define>
+  <define name="one-of.attlist" combine="interleave">
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="item.element">
+    <element name="item">
+      <ref name="item.attlist"/>
+      <zeroOrMore>
+        <ref name="rule-expansion"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="item.attlist" combine="interleave">
+    <optional>
+      <attribute name="repeat">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="repeat-prob">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="weight">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="rule.element">
+    <element name="rule">
+      <ref name="rule.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="rule-expansion"/>
+          <ref name="example.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="rule.attlist" combine="interleave">
+    <attribute name="id"/>
+    <optional>
+      <attribute name="scope" a:defaultValue="private">
+        <choice>
+          <value>private</value>
+          <value>public</value>
+        </choice>
+      </attribute>
+    </optional>
+  </define>
+  <define name="example.element">
+    <element name="example">
+      <ref name="example.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="example.attlist" combine="interleave">
+    <empty/>
+  </define>
+  <define name="lexicon.element">
+    <element name="lexicon">
+      <ref name="lexicon.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="lexicon.attlist" combine="interleave">
+    <attribute name="uri">
+      <ref name="uri"/>
+    </attribute>
+    <optional>
+      <attribute name="type"/>
+    </optional>
+  </define>
+  <!--
+    Changes to SRGS 1.0 DTD grammar element:
+    - mixed, unordered content model 
+    - addition of 'scope', 'src', 'type', 'weight' and caching attributes
+    - 'version' attribute is optional
+    - removal of xmlns, xmlns:xsi, and xsi:schemaLocation attributes
+  -->
+  <define name="grammar.element">
+    <element name="grammar">
+      <ref name="grammar.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <text/>
+          <ref name="meta.element"/>
+          <ref name="metadata.element"/>
+          <ref name="lexicon.element"/>
+          <ref name="rule.element"/>
+          <ref name="tag.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="grammar.attlist" combine="interleave">
+    <optional>
+      <attribute name="scope">
+        <ref name="scope"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="src">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="type"/>
+    </optional>
+    <optional>
+      <attribute name="weight"/>
+    </optional>
+    <ref name="cache.attrs"/>
+    <optional>
+      <attribute name="tag-format">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:base">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="version">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="xml:lang">
+        <data type="NMTOKEN"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="root"/>
+    </optional>
+    <optional>
+      <attribute name="mode" a:defaultValue="voice">
+        <choice>
+          <value>voice</value>
+          <value>dtmf</value>
+        </choice>
+      </attribute>
+    </optional>
+  </define>
+  <!-- ============================= Audio Input ============================= -->
+  <define name="record.element">
+    <element name="record">
+      <ref name="record.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="audio"/>
+          <ref name="event.handler"/>
+          <ref name="filled.element"/>
+          <ref name="input"/>
+          <ref name="prompt.element"/>
+          <ref name="property.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="record.attlist" combine="interleave">
+    <ref name="item.attrs"/>
+    <optional>
+      <attribute name="type"/>
+    </optional>
+    <optional>
+      <attribute name="beep" a:defaultValue="false">
+        <ref name="boolean"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="maxtime">
+        <ref name="duration"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="modal" a:defaultValue="true">
+        <ref name="boolean"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="finalsilence">
+        <ref name="duration"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="dtmfterm" a:defaultValue="true">
+        <ref name="boolean"/>
+      </attribute>
+    </optional>
+  </define>
+  <!-- ============================ Call Control ============================ -->
+  <define name="disconnect.element">
+    <element name="disconnect">
+      <ref name="disconnect.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="disconnect.attlist" combine="interleave">
+    <empty/>
+  </define>
+  <define name="transfer.element">
+    <element name="transfer">
+      <ref name="transfer.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="audio"/>
+          <ref name="event.handler"/>
+          <ref name="filled.element"/>
+          <ref name="input"/>
+          <ref name="prompt.element"/>
+          <ref name="property.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="transfer.attlist" combine="interleave">
+    <ref name="item.attrs"/>
+    <optional>
+      <attribute name="dest">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="destexpr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="bridge" a:defaultValue="false">
+        <ref name="boolean"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="connecttimeout">
+        <ref name="duration"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="maxtime">
+        <ref name="duration"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="transferaudio">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="aai"/>
+    </optional>
+    <optional>
+      <attribute name="aaiexpr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+  </define>
+  <!-- ============================ Control Flow ============================ -->
+  <define name="if.attrs">
+    <attribute name="cond">
+      <ref name="expression"/>
+    </attribute>
+  </define>
+  <define name="if.element">
+    <element name="if">
+      <ref name="if.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="executable.content"/>
+          <ref name="elseif.element"/>
+          <ref name="else.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="if.attlist" combine="interleave">
+    <ref name="if.attrs"/>
+  </define>
+  <define name="elseif.element">
+    <element name="elseif">
+      <ref name="elseif.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="elseif.attlist" combine="interleave">
+    <ref name="if.attrs"/>
+  </define>
+  <define name="else.element">
+    <element name="else">
+      <ref name="else.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="else.attlist" combine="interleave">
+    <empty/>
+  </define>
+  <define name="exit.element">
+    <element name="exit">
+      <ref name="exit.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="exit.attlist" combine="interleave">
+    <optional>
+      <attribute name="expr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="namelist">
+        <ref name="variable.names"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="filled.element">
+    <element name="filled">
+      <ref name="filled.attlist"/>
+      <zeroOrMore>
+        <ref name="executable.content"/>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="filled.attlist" combine="interleave">
+    <optional>
+      <attribute name="mode">
+        <choice>
+          <value>any</value>
+          <value>all</value>
+        </choice>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="namelist">
+        <ref name="restrictedvariable.names"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="goto.element">
+    <element name="goto">
+      <ref name="goto.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="goto.attlist" combine="interleave">
+    <ref name="cache.attrs"/>
+    <ref name="next.attrs"/>
+    <optional>
+      <attribute name="fetchaudio">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="expritem">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="nextitem">
+        <ref name="restrictedvariable.name"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="param.element">
+    <element name="param">
+      <ref name="param.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="param.attlist" combine="interleave">
+    <attribute name="name">
+      <data type="NMTOKEN"/>
+    </attribute>
+    <optional>
+      <attribute name="expr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="value"/>
+    </optional>
+    <optional>
+      <attribute name="valuetype" a:defaultValue="data">
+        <choice>
+          <value>data</value>
+          <value>ref</value>
+        </choice>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="type"/>
+    </optional>
+  </define>
+  <define name="return.element">
+    <element name="return">
+      <ref name="return.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="return.attlist" combine="interleave">
+    <optional>
+      <attribute name="namelist">
+        <ref name="variable.names"/>
+      </attribute>
+    </optional>
+    <ref name="throw.attrs"/>
+  </define>
+  <define name="subdialog.element">
+    <element name="subdialog">
+      <ref name="subdialog.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="audio"/>
+          <ref name="event.handler"/>
+          <ref name="filled.element"/>
+          <ref name="param.element"/>
+          <ref name="prompt.element"/>
+          <ref name="property.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="subdialog.attlist" combine="interleave">
+    <ref name="item.attrs"/>
+    <optional>
+      <attribute name="src">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="srcexpr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+    <ref name="cache.attrs"/>
+    <optional>
+      <attribute name="fetchaudio">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <ref name="submit.attrs"/>
+  </define>
+  <define name="submit.element">
+    <element name="submit">
+      <ref name="submit.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="submit.attlist" combine="interleave">
+    <ref name="cache.attrs"/>
+    <ref name="next.attrs"/>
+    <optional>
+      <attribute name="fetchaudio">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <ref name="submit.attrs"/>
+  </define>
+  <!-- ========================== Miscellaneous ============================== -->
+  <define name="log.element">
+    <element name="log">
+      <ref name="log.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <text/>
+          <ref name="value.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="log.attlist" combine="interleave">
+    <optional>
+      <attribute name="label"/>
+    </optional>
+    <optional>
+      <attribute name="expr">
+        <ref name="expression"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="object.element">
+    <element name="object">
+      <ref name="object.attlist"/>
+      <zeroOrMore>
+        <choice>
+          <ref name="audio"/>
+          <ref name="event.handler"/>
+          <ref name="filled.element"/>
+          <ref name="param.element"/>
+          <ref name="prompt.element"/>
+          <ref name="property.element"/>
+        </choice>
+      </zeroOrMore>
+    </element>
+  </define>
+  <define name="object.attlist" combine="interleave">
+    <ref name="item.attrs"/>
+    <ref name="cache.attrs"/>
+    <optional>
+      <attribute name="classid">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="codebase">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="data">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="type"/>
+    </optional>
+    <optional>
+      <attribute name="codetype"/>
+    </optional>
+    <optional>
+      <attribute name="archive">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+  </define>
+  <define name="property.element">
+    <element name="property">
+      <ref name="property.attlist"/>
+      <empty/>
+    </element>
+  </define>
+  <define name="property.attlist" combine="interleave">
+    <attribute name="name">
+      <data type="NMTOKEN"/>
+    </attribute>
+    <attribute name="value"/>
+  </define>
+  <define name="script.element">
+    <element name="script">
+      <ref name="script.attlist"/>
+      <text/>
+    </element>
+  </define>
+  <define name="script.attlist" combine="interleave">
+    <optional>
+      <attribute name="src">
+        <ref name="uri"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="charset"/>
+    </optional>
+    <ref name="cache.attrs"/>
+  </define>
+  <start>
+    <choice>
+      <ref name="vxml.element"/>
+    </choice>
+  </start>
+  <define name="any">
+    <zeroOrMore>
+      <choice>
+        <element>
+          <anyName/>
+          <zeroOrMore>
+            <attribute>
+              <anyName/>
+            </attribute>
+          </zeroOrMore>
+          <ref name="any"/>
+        </element>
+        <text/>
+      </choice>
+    </zeroOrMore>
+  </define>
+</grammar>
