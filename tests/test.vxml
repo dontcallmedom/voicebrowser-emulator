@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><vxml version="2.0" xmlns="http://www.w3.org/2001/vxml"><property name="inputmodes" value="dtmf"/><var name="IVRTYPE" expr="'VOICEGLUE'"/><var name="DNID" expr="'shuga_test'"/><var name="SESSIONID" expr="'5263e8984d85b'"/><var name="STARTTIME" expr="'1382279320'"/><var name="CALLERID" expr="'anonymous_52757d53cb80d'"/><var name="USERID" expr="-1"/><var name="CONFESSIONID" expr="1"/><var name="CONFESSIONINDEX" expr="0"/><var name="RADIOID" expr="20"/><var name="CHARACTERID" expr="154"/><var name="PROMPTS_DIR" expr="'prompts/Ekene/en'"/><var name="REGISTERED" expr="0"/><var name="CONFESSION_COMMENTS" expr="0"/><var name="MESSAGES" expr="0"/>
-
+<?xml version="1.0" encoding="utf-8"?><vxml version="2.0" xmlns="http://www.w3.org/2001/vxml"><property name="inputmodes" value="dtmf"/><var name="IVRTYPE" expr="'VOICEGLUE'"/><var name="USERID" expr="-1"/><var name="CONFESSIONID" expr=""/>
 <form>
   <block>
 
