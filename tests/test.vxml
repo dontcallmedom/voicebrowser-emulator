@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?><vxml version="2.0" xmlns="http://www.w3.org/2001/vxml"><property name="inputmodes" value="dtmf"/><var name="IVRTYPE" expr="'VOICEGLUE'"/><var name="USERID" expr="-1"/><var name="CONFESSIONID" expr=""/>
 <form>
-  <block>
+  <field name="hear">
+    <option dtmf="1" value="ekene">Listen to Ekene</option>
+    <option dtmf="2" value="exit">Exit</option>
+    <prompt>Please select what you to want to hear next</prompt>
+    <filled>
+      <if cond="hear == 'ekene'">
+	<goto nextitem="ekene"/>
+	<else>
+	</else>
+      </if>
+    </filled>
+  </field>
+  <block name="ekene">
 
 
     <prompt bargein="false">
