@@ -15,6 +15,7 @@ class Undefined {
 }
 
 class VoiceXMLParser {
+  public static $url;
   public static function readExpr($varValue) {
     if ($varValue == null || $varValue == "") {
       $varValue = Undefined::Instance();
@@ -57,6 +58,45 @@ class VoiceXMLParser {
       throw new UnhandedlVoiceXMLException('Cannot handle conditions that are not simple comparisons: '.$cond );
     }
   }
+
+  public static function setUrl($url) {
+    VoiceXMLParser::$url = $url;
+  }
+
+    // from http://nashruddin.com/PHP_Script_for_Converting_Relative_to_Absolute_URL
+    public function absoluteUrl($rel)
+    {
+      /* return if already absolute URL */
+        if (parse_url($rel, PHP_URL_SCHEME) != '') return $rel;
+
+	if (VoiceXMLParser::$url === null) {
+	  throw new Exception("No base URL set, can't resolve relative URL ".$rel);
+	}
+
+        /* queries and anchors */
+        if ($rel[0]=='#' || $rel[0]=='?') return VoiceXMLParser::$url.$rel;
+
+        /* parse base URL and convert to local variables:
+         $scheme, $host, $path */
+        extract(parse_url(VoiceXMLParser::$url));
+
+        /* remove non-directory element from path */
+        $path = preg_replace('#/[^/]*$#', '', $path);
+
+        /* destroy path if relative url points to root */
+        if ($rel[0] == '/') $path = '';
+
+        /* dirty absolute URL */
+        $abs = "$host$path/$rel";
+
+        /* replace '//' or '/./' or '/foo/../' with '/' */
+        $re = array('#(/\.?/)#', '#/(?!\.\.)[^/]+/\.\./#');
+        for($n=1; $n>0; $abs=preg_replace($re, '/', $abs, -1, $n)) {}
+
+        /* absolute URL is ready! */
+        return $scheme.'://'.$abs;
+    }
+
 }
 
 class VoiceXMLReader {
@@ -79,6 +119,7 @@ class VoiceXMLReader {
     $this->xmlreader->xml($content);
     $this->xmlreader->setRelaxNGSchema('vxml.rng');
     $this->url = $url;
+    VoiceXMLParser::setUrl($url);
 
     libxml_use_internal_errors(TRUE);
     if (!$this->xmlreader->isValid()) {
@@ -234,6 +275,8 @@ class VoiceXMLFormItem {
   public $name;
   public $value;
   public $promptCounter = 0;
+  public $prompts = array();
+  public $options = array();
   public $type;
   
   private function _generateName() {
@@ -257,7 +300,6 @@ class VoiceXMLFormItem {
       VoiceXMLParser::readCond($this->xmlreader->getAttribute("cond"), $this->variables) 
       // whether current value is undefined
       && $this->value === Undefined::Instance();
-    $this->xmlreader->next();
   }
 
   public function __construct($xml, $variables) {
@@ -274,6 +316,7 @@ class VoiceXMLFormItem {
 	// intentional no break!
 	case "block":
 	  $this->_initFormItem();
+	  $this->xmlreader->next();
 	break;
 	}
       }
@@ -281,36 +324,60 @@ class VoiceXMLFormItem {
   }
 
   public function collect($callback) {
-    $this->xmlreader = new XMLReader();
     $this->xmlreader->xml($this->xml);
     while($this->xmlreader->read()) {
       if ($this->xmlreader->nodeType == XMLReader::ELEMENT) {
 	switch($this->xmlreader->name) {
+	case "field":
+	case "record":
+	case "block":
+	  break;
+	case "audio":
 	case "prompt":
-	case "grammar":
+	  $this->prompts[] = new VoiceXMLPrompt($this->xmlreader->readOuterXML());
+	  $this->xmlreader->next();
+	  break;
 	case "option":
-	case "noinput":
-	case "submit":
+	  $this->options[] = new VoiceXMLOption($this->xmlreader->readOuterXML());
+	  $this->xmlreader->next();
+	  break;
+	case "enumerate":
+	case "value":
+	case "script":
+	case "link":
+	case "grammar":
+	case "if":
+	  throw new UnhandedlVoiceXMLException('Cannot handle '.$this->xmlreader->name.' element in form item '.$this->name);
+	case "var":
+	case "assign":
+	case "property":
+	case "clear":
+	case "disconnect":
+	case "exit":
 	case "goto":
+	case "log":
+	case "return":
+	case "submit":
+	case "throw":
 	case "filled":
-	  call_user_func_array(array($this,'_collect' . ucfirst($this->xmlreader->name)), array($callback));
-	$this->xmlreader->next();
+	case "reprompt":
+	case "catch":
+	case "help":
+	case "noinput":
+	case "nomatch":
+	case "error":
+	  // for process only
+	  $this->xmlreader->next();
+	  break;
 	default:
-	  break;	  
+	  throw new UnhandedlVoiceXMLException('Unexpected '.$this->xmlreader->name.' element in form item '.$this->name);
 	}
       }
     }
+    $choice = call_user_func_array($callback, array("option", array($this->options)));
+    call_user_func_array($callback, array("prompts", array($this->prompts)));
   }
 
-  private function _collectPrompt($cb) {
-    call_user_func_array($cb, array("Prompt", array()));
-  }
-  private function _collectGrammar($cb) {
-    call_user_func_array($cb, array("Grammar", array()));
-  }
-  private function _collectOption($cb) {
-    call_user_func_array($cb, array("Option", array()));
-  }
   private function _collectNoinput($cb) {
     call_user_func_array($cb, array("Noinput", array()));
   }
@@ -327,3 +394,51 @@ class VoiceXMLFormItem {
 
 }
 
+class VoiceXMLPrompt {
+  protected $texts = array();
+  protected $audios = array();
+
+  public function __construct($xml) {
+    $xmlreader = new XMLReader();
+    $xmlreader->xml($xml);
+    while($xmlreader->read()) {
+      if ($xmlreader->nodeType == XMLReader::ELEMENT) {
+	switch($xmlreader->name) {
+	case "prompt":
+	  break;
+	case "audio":
+	  $src = $xmlreader->getAttribute("src");
+	  if ($src === null) {
+	    throw new UnhandedlVoiceXMLException('Cannot handle audio element without src attribute');
+	  }
+	  $this->audios[]=VoiceXMLParser::absoluteUrl($src);
+	  break;
+	case "value":
+	default:
+	  throw new UnhandedlVoiceXMLException('Cannot handle prompts with non-static content ('.$xmlreader->name.')');
+	}
+      } else if ($xmlreader->nodeType == XMLReader::TEXT) {
+	$this->texts[]=$xmlreader->readString();
+      }
+    }
+  }
+}
+
+class VoiceXMLOption {
+  public $label;
+  public $value;
+  public $dtmf;
+
+  public function __construct($xml) {
+    $xmlreader = new XMLReader();
+    $xmlreader->xml($xml);
+    $xmlreader->read();
+    $this->label = $xmlreader->readString();
+    $this->value = $xmlreader->getAttribute("value");
+    $dtmf = $xmlreader->getAttribute("dtmf");
+    if ($dtmf === null) {
+      throw new UnhandedlVoiceXMLException('Cannot handle option without dtmf attribute');
+    }
+    $this->dtmf =  str_split($dtmf, 1);
+  }
+}
