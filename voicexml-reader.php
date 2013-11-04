@@ -154,8 +154,10 @@ class VoiceXMLFormReader {
   private $xmlreader;
   private $collectxmlreader;
   private $variables = array();
-  private $nextFormItem = false;
+  private $nextFormItem = null;
   private $prompts = array();
+  private $items = array();
+  private $currentItemIndex = 0;
 
   public function __construct($xml) {
     $this->xml = $xml;
@@ -170,7 +172,7 @@ class VoiceXMLFormReader {
       if ($formitem === null) {
 	break;
       }
-      $this->_formCollect($formitem, $callback);
+      $formitem->collect($callback);
       $this->_formProcess();
     }
   }
@@ -190,82 +192,100 @@ class VoiceXMLFormReader {
 	  break;
 	case "record":
 	case "field":
-	  $this->_initFormItem(Undefined::Instance());
-	break;
 	case "block":
-	  $this->_initFormItem(TRUE);
-	  break;
+	  $this->items[] = new VoiceXMLFormItem($this->xmlreader->readOuterXML(), $this->variables);
+	$this->xmlreader->next();
+	break;
 	default:
 	  throw new UnhandedlVoiceXMLException('Cannot handle form item '.$this->xmlreader->name);
 	}
       }
     }
+    reset($this->items);
   }
 
+  private function _formSelect() {
+    if ($this->nextFormItem) {
+      $item = $this->nextFormItem;
+      $this->nextFormItem = null;
+      return $item;
+    }
+    while($item = current($this->items)) {
+      next($this->items);
+      if ($item->guardCondition) {	
+	return $item;
+      }
+    }
+    return null;
+  }
+
+  private function _formProcess() {
+  }
+
+}
+
+
+class VoiceXMLFormItem {
+  protected $xml;
+  protected $xmlreader;
+  protected $variables;
+  protected $expectsInput = false;
+  public $guardCondition = true;
+  public $name;
+  public $value;
+  public $promptCounter = 0;
+  public $type;
+  
   private function _generateName() {
     $length = 10;
     $randomString = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, $length);
     return $randomString;
   }
 
-  private function _initFormItem($default) {
+
+  private function _initFormItem() {
+    $this->type = $this->xmlreader->name;
     $name = $this->xmlreader->getAttribute("name");
     if ($name == null && $this->xmlreader->name != "block") {
       throw new UnhandedlVoiceXMLException('Cannot handle form item without an explicit name');
     }
+    $this->name = $name;
     $value = VoiceXMLParser::readExpr($this->xmlreader->getAttribute("expr"));
-    if ($name !== null) {
-      $this->variables[$name] = ($value !== null ? $value : $default);
-      $this->prompts[$name] = 0;
-    }
+    $this->value = ($value !== null ? $value : Undefined::Instance());
+    $this->guardCondition = 
+      // whether cond attribute resolve to true
+      VoiceXMLParser::readCond($this->xmlreader->getAttribute("cond"), $this->variables) 
+      // whether current value is undefined
+      && $this->value === Undefined::Instance();
     $this->xmlreader->next();
   }
 
-  private function _formSelect() {
-    if ($this->nextFormItem) {
-      $this->nextFormItem = false;
-      if ($this->xmlreader->next()) {
-	return $this->xmlreader->readOuterXML();
-      } else {
-	return null;
-      }
-    }
+  public function __construct($xml, $variables) {
+    $this->xml =$xml;
+    $this->variables = $variables;
+    $this->xmlreader = new XMLReader();
+    $this->xmlreader->xml($this->xml);
     while($this->xmlreader->read()) {
       if ($this->xmlreader->nodeType == XMLReader::ELEMENT) {
 	switch($this->xmlreader->name) {
-	case "block":
-	  if (VoiceXMLParser::readCond($this->xmlreader->getAttribute("cond"), $this->variables)) {
-	    return $this->xmlreader->readOuterXML();
-	  }
-	  $this->xmlreader->next();
-	  break;
-	case "record":
 	case "field":
-	  $cond = $this->xmlreader->getAttribute("cond");
-	if ($cond == null && $this->variables[$this->xmlreader->getAttribute("name")] === Undefined::Instance()) {
-	  return $this->xmlreader->readOuterXML();
-	} else {
-	  if (VoiceXMLParser::readCond($this->xmlreader->getAttribute("cond"), $this->variables)) {
-	    return $this->xmlreader->readOuterXML();
-	  }	  
-	}	
-	$this->xmlreader->next();
+	case "record":
+	  $this->expectsInput = true;
+	// intentional no break!
+	case "block":
+	  $this->_initFormItem();
 	break;
-	case "form":
-	  break;
-	default:
-	  $this->xmlreader->next();
 	}
       }
     }
   }
 
-  private function _formCollect($xml, $callback) {
-    $this->collectxmlreader = new XMLReader();
-    $this->collectxmlreader->xml($xml);
-    while($this->collectxmlreader->read()) {
-      if ($this->collectxmlreader->nodeType == XMLReader::ELEMENT) {
-	switch($this->collectxmlreader->name) {
+  public function collect($callback) {
+    $this->xmlreader = new XMLReader();
+    $this->xmlreader->xml($this->xml);
+    while($this->xmlreader->read()) {
+      if ($this->xmlreader->nodeType == XMLReader::ELEMENT) {
+	switch($this->xmlreader->name) {
 	case "prompt":
 	case "grammar":
 	case "option":
@@ -273,10 +293,10 @@ class VoiceXMLFormReader {
 	case "submit":
 	case "goto":
 	case "filled":
-	  call_user_func_array(array($this,'_collect' . ucfirst($this->collectxmlreader->name)), array($callback));
-	$this->collectxmlreader->next();
+	  call_user_func_array(array($this,'_collect' . ucfirst($this->xmlreader->name)), array($callback));
+	$this->xmlreader->next();
 	default:
-	  break;
+	  break;	  
 	}
       }
     }
@@ -305,7 +325,5 @@ class VoiceXMLFormReader {
   }
 
 
-  private function _formProcess() {
-  }
-
 }
+
