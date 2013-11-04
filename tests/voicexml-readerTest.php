@@ -37,9 +37,9 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
     $xml = file_get_contents("tests/test.vxml");
     $this->vxml->callback = function($type, $params) {
       echo $type."\n";
-      //print_r($params);
+      print_r($params);
     };
-    $this->assertTrue($this->vxml->load($xml));
+    $this->assertTrue($this->vxml->load($xml, "http://example.org/"));
     $variables =     array(0=>array('IVRTYPE' => 'VOICEGLUE',
 			   'USERID' => -1,
 				    'CONFESSIONID' => Undefined::Instance()));
