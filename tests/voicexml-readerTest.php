@@ -11,6 +11,12 @@ class VoiceXMLBrowserTest extends PHPUnit_Framework_TestCase {
     $this->assertTrue(VoiceXMLBrowser::readCond("unity >= 1", $variables));
     $this->assertFalse(VoiceXMLBrowser::readCond("unity > 1", $variables));
   }
+
+  public function testReadTime() {
+    $this->assertEquals(VoiceXMLBrowser::readTime("10s"), 10000);
+    $this->assertEquals(VoiceXMLBrowser::readTime("10ms"), 10);
+    $this->assertEquals(VoiceXMLBrowser::readTime("10mas"), null);
+  }
 }
 
 class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
@@ -53,24 +59,51 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   }
 
   public function testFormInteraction() {
+    $order = 0;
     $eventhandler = new VoiceXMLEventHandler();
-    $eventhandler->onprompt = function ($prompts) {
-      foreach ($prompts as $p) {
-	foreach ($p->texts as $t) {
-	  print "Say: ".$t."\n";
-	}
-      }
+    $eventhandler->onprompt = function ($prompts) use (&$order) {
+      $this->assertEquals($prompts[0]->texts[0],"Please tell us who you are");
+      $this->assertEquals($order,0);
+      $order++;
     };
-    $eventhandler->onoption = function ($options) {
-      print "options received, ignoring\n";
-      return null;
-    };
-    $eventhandler->onnoinput = function () use (&$eventhandler) {
-      print "noinput\n";
-      $eventhandler->onoption = function ($options) {
-	print "options received, picking 1st\n";
-	return $options[0]->dtmf;
+    $eventhandler->onrecord = function () use (&$eventhandler, &$order) {
+      $eventhandler->onprompt = function ($prompts) use (&$order) {
+	$this->assertEquals($prompts[0]->texts[0],"DEFAULT Too long");
+	$this->assertEquals($prompts[1]->texts[0],"Please tell us who you are");
+	$this->assertEquals($order,1);
+	$order++;
       };
+      return new VoiceXMLAudioRecord("foo.wav", 15000);
+    };
+    $eventhandler->onmaxspeechtimeout = function () use (&$eventhandler, &$order) {
+      $eventhandler->onrecord = function () use (&$eventhandler, &$order) {
+	$eventhandler->onprompt = function ($prompts) use (&$order) {
+	  $this->assertEquals($prompts[0]->texts[0],"Please select what you to want to hear next");
+	  $this->assertEquals($order,2);
+	  $order++;
+	};	
+	return new VoiceXMLAudioRecord("foo.wav", 5000);
+      };
+    };
+    $eventhandler->onoption = function ($options) use (&$eventhandler, &$order) {
+      $eventhandler->onnoinput = function () use (&$eventhandler, &$order) {
+	$eventhandler->onprompt = function ($prompts) use (&$order) {
+	  $this->assertEquals($prompts[0]->texts[0],"Please select what you to want to hear next");
+	  $this->assertEquals($order,3);
+	  $order++;
+	};	
+	$eventhandler->onoption = function ($options) use (&$eventhandler, &$order) {
+	  $this->assertEquals($options[0]->label, "Listen to Ekene");
+	  $this->assertEquals($options[0]->dtmf, array("1"));
+	  $eventhandler->onprompt = function ($prompts) use (&$order) {
+	    $this->assertEquals($prompts[0]->audios[0],"http://example.org/prompts/EKENE/en/welcome.wav");
+	    $this->assertEquals($order,4);
+
+	  };
+	  return $options[0]->dtmf;
+	};
+      };      
+      return null;
     };
 
     $this->vxml->callback = $eventhandler;

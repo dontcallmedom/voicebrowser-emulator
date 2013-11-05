@@ -17,6 +17,7 @@ class Undefined {
 
 class VoiceXMLBrowser {
   public static $maxReprompts = 10;
+  public static $defaultMaxTime = 10000;
 
   public static $url;
   public static function readExpr($varValue) {
@@ -31,6 +32,20 @@ class VoiceXMLBrowser {
       throw new UnhandedlVoiceXMLException('cannot handle attribute expr with values that are not string or number: '.$varValue );
     }
     return $varValue;
+  }
+
+  public static function readTime($value) {
+    $matches = array();
+    if ($value === null) {
+      return $value;
+    } else if (preg_match("/^ *([0-9]+) *(m?s) *$/", $value, $matches)) {
+      if ($matches[2] == "ms") {
+	return intval($matches[1]);
+      } else {
+	return intval($matches[1])*1000;
+      }
+    }
+    return null;
   }
 
   public static function readCond($cond, $variables) {
@@ -235,6 +250,7 @@ class VoiceXMLFormReader {
   private $items = array();
   private $currentItemIndex = 0;
   private $repromptCounter = 0;
+  private $maxrecordtime;
 
   public function __construct($xml) {
     $this->xml = $xml;
@@ -337,6 +353,9 @@ class VoiceXMLFormItem {
       VoiceXMLBrowser::readCond($this->xmlreader->getAttribute("cond"), $this->variables) 
       // whether current value is undefined
       && $this->value === Undefined::Instance();
+    $this->maxrecordtime = VoiceXMLBrowser::readTime($this->xmlreader->getAttribute("maxtime"));
+    $this->maxrecordtime = $this->maxrecordtime !== null ? $this->maxrecordtime : VoiceXMLBrowser::$defaultMaxTime;
+
   }
 
   public function __construct($xml, $variables) {
@@ -452,8 +471,6 @@ class VoiceXMLFormItem {
     }
     if (count($this->options)) {
       $input = $eventhandler->onoption($this->options);
-      print_r ($input);
-      print "\n";
       if ($input === null) {
 	return $this->_processEvent($eventhandler, "noinput");
       } else if (!in_array($input, array_map(function ($op) { return $op->dtmf;}, $this->options))) {
@@ -462,6 +479,14 @@ class VoiceXMLFormItem {
       //    $this->promptCounter++;
       $selectedOptionIndex = array_search($input, array_map(function ($op) { return $op->dtmf;}, $this->options));
       return $this->options[$selectedOptionIndex]->value;
+    } else { 
+      $record = $eventhandler->onrecord();
+      if ($record === null) {
+	return $this->_processEvent($eventhandler, "noinput");
+      } else if ($record->length > $this->maxrecordtime) {
+	return $this->_processEvent($eventhandler, "maxspeechtimeout");
+      }
+      return $record;
     }
   }
 
@@ -550,7 +575,9 @@ class VoiceXMLCatch {
 	break;
 	case "audio":
 	case "prompt":
-	  $this->prompts = (new VoiceXMLPrompt())->loadFromXML($xmlreader->readOuterXML());
+	  $p = new VoiceXMLPrompt();
+	$p->loadFromXML($xmlreader->readOuterXML());
+	$this->prompts[] = $p;
 	$xmlreader->next();
 	break;
 	default:
@@ -561,8 +588,16 @@ class VoiceXMLCatch {
   }
 }
 
+class VoiceXMLAudioRecord {
+  public $file;
+  public $length;
+  public function __construct($file, $length) {
+    $this->file = $file;
+    $this->length = $length;
+  }
+}
+
 class VoiceXMLEventHandler {
-  public $onsuccess;
   public $onnoinput;
   public $onnomatch;
   public $onexit;
@@ -570,24 +605,22 @@ class VoiceXMLEventHandler {
   public $onprompt;
   public $onoption;
   public $onrecord;
-
-
+  public $onmaxspeechtimeout;
 
   public function __construct() {
-    $void = 
-    $this->onsuccess = $this->onnoinput = $this->onnomatch = $this->onexit = $this->ondisconnect = function () {
+    $this->onsuccess = $this->onnoinput = $this->onnomatch = $this->onexit = $this->ondisconnect = $this->onrecord = $this->onmaxspeechtimeout = function () {
       return null;
     };
-    $this->onprompt =$this->onoption = $this->onrecord = function ($param) {
+    $this->onprompt =$this->onoption =  function ($param) {
       return null;
     };
   }
-
-    public function __call($method, $args)
-    {
-        $closure = $this->$method;
-        return call_user_func_array($closure, $args);
-    }
+  
+  public function __call($method, $args)
+  {
+    $closure = $this->$method;
+    return call_user_func_array($closure, $args);
+  }
 
 }
 

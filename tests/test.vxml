@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?><vxml version="2.0" xmlns="http://www.w3.org/2001/vxml"><property name="inputmodes" value="dtmf"/><var name="IVRTYPE" expr="'VOICEGLUE'"/><var name="USERID" expr="-1"/><var name="CONFESSIONID" expr=""/>
 <form>
+  <record name="you" maxtime="10s">
+    <prompt>Please tell us who you are</prompt>
+    <noinput><prompt>So, who are you?</prompt></noinput>
+    <filled>
+	<goto nextitem="hear"/>
+    </filled>
+  </record>
+
   <field name="hear">
     <option dtmf="1" value="ekene">Listen to Ekene</option>
     <option dtmf="2" value="exit">Exit</option>
