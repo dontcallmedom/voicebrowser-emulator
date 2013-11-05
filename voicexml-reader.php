@@ -1,6 +1,7 @@
 <?php
 class InvalidVoiceXMLException extends Exception {};
 class UnhandedlVoiceXMLException extends Exception {};
+class VoiceXMLDisconnectException extends Exception {};
 
 class Undefined {
   public static function Instance() {
@@ -14,7 +15,9 @@ class Undefined {
   private function __construct() {}
 }
 
-class VoiceXMLParser {
+class VoiceXMLBrowser {
+  public static $maxReprompts = 10;
+
   public static $url;
   public static function readExpr($varValue) {
     if ($varValue == null || $varValue == "") {
@@ -42,17 +45,17 @@ class VoiceXMLParser {
     } elseif (preg_match("/^ *([a-zA-Z_][^ =<>!]*) *(==|>|<|!=|<=|>=) *([^ ]*) *$/", $cond, $matches)) {
       switch ($matches[2]) {
       case "==":
-	return $variables[$matches[1]] == VoiceXMLParser::readExpr($matches[3]);
+	return $variables[$matches[1]] == VoiceXMLBrowser::readExpr($matches[3]);
       case ">":
-	return $variables[$matches[1]] > VoiceXMLParser::readExpr($matches[3]);
+	return $variables[$matches[1]] > VoiceXMLBrowser::readExpr($matches[3]);
       case "<":
-	return $variables[$matches[1]] < VoiceXMLParser::readExpr($matches[3]);
+	return $variables[$matches[1]] < VoiceXMLBrowser::readExpr($matches[3]);
       case "<=":
-	return $variables[$matches[1]] <= VoiceXMLParser::readExpr($matches[3]);
+	return $variables[$matches[1]] <= VoiceXMLBrowser::readExpr($matches[3]);
       case ">=":
-	return $variables[$matches[1]] >= VoiceXMLParser::readExpr($matches[3]);
+	return $variables[$matches[1]] >= VoiceXMLBrowser::readExpr($matches[3]);
       case "!=":
-	return $variables[$matches[1]] != VoiceXMLParser::readExpr($matches[3]);
+	return $variables[$matches[1]] != VoiceXMLBrowser::readExpr($matches[3]);
       }
     } else {
       throw new UnhandedlVoiceXMLException('Cannot handle conditions that are not simple comparisons: '.$cond );
@@ -60,7 +63,7 @@ class VoiceXMLParser {
   }
 
   public static function setUrl($url) {
-    VoiceXMLParser::$url = $url;
+    VoiceXMLBrowser::$url = $url;
   }
 
     // from http://nashruddin.com/PHP_Script_for_Converting_Relative_to_Absolute_URL
@@ -69,16 +72,16 @@ class VoiceXMLParser {
       /* return if already absolute URL */
         if (parse_url($rel, PHP_URL_SCHEME) != '') return $rel;
 
-	if (VoiceXMLParser::$url === null) {
+	if (VoiceXMLBrowser::$url === null) {
 	  throw new Exception("No base URL set, can't resolve relative URL ".$rel);
 	}
 
         /* queries and anchors */
-        if ($rel[0]=='#' || $rel[0]=='?') return VoiceXMLParser::$url.$rel;
+        if ($rel[0]=='#' || $rel[0]=='?') return VoiceXMLBrowser::$url.$rel;
 
         /* parse base URL and convert to local variables:
          $scheme, $host, $path */
-        extract(parse_url(VoiceXMLParser::$url));
+        extract(parse_url(VoiceXMLBrowser::$url));
 
         /* remove non-directory element from path */
         $path = preg_replace('#/[^/]*$#', '', $path);
@@ -97,6 +100,39 @@ class VoiceXMLParser {
         return $scheme.'://'.$abs;
     }
 
+
+    public static function defaultEventCatcher() {
+      $builder = function ($type, $prompt=null, $outcome = "reprompt") {
+	$catcher = new VoiceXMLCatch();
+	$catcher->type = $type;
+	if ($prompt !== null) {
+	  $p = new VoiceXMLPrompt();
+	  $p->texts[] = $prompt;
+	  $catcher->prompts[] = $p;
+	}
+	if ($outcome == "reprompt") {
+	  $catcher->reprompt = true;
+	} else if ($outcome == "exit") {
+	  $catcher->exit = true;
+	}
+	return $catcher;
+      };
+
+      // inspired from default catch elements
+      // http://www.w3.org/TR/voicexml20/#dml5.2.5
+      $eventCatcher = array();
+      $eventCatcher["cancel"] = $builder("cancel", null, 'none');
+      $eventCatcher["error"] = $builder("error", "DEFAULT Error", 'exit');
+      $eventCatcher["exit"] = $builder("exit", null, 'exit');
+      $eventCatcher["help"] = $builder("help", "DEFAULT Help", 'reprompt');
+      $eventCatcher["noinput"] = $builder("noinput", null, 'reprompt');
+      $eventCatcher["nomatch"] = $builder("nomatch", "DEFAULT Try again", 'reprompt');
+      $eventCatcher["maxspeechtimeout"] = $builder("maxspeechtimeout", "DEFAULT Too long", 'reprompt');
+      $eventCatcher["connection.disconnect"] = $builder("connection.disconnect", null, 'exit');
+      $eventCatcher["*"] = $builder("*", "DEFAULT Catch all", 'exit');
+      return $eventCatcher;
+    }
+
 }
 
 class VoiceXMLReader {
@@ -111,15 +147,14 @@ class VoiceXMLReader {
 
   public function __construct() {
     $this->xmlreader = new XMLReader();
-    $this->callback = function ($type, $params) {
-    };
+    $this->callback = new VoiceXMLEventHandler();
   }
 
   public function load($content, $url = null) {
     $this->xmlreader->xml($content);
     $this->xmlreader->setRelaxNGSchema('vxml.rng');
     $this->url = $url;
-    VoiceXMLParser::setUrl($url);
+    VoiceXMLBrowser::setUrl($url);
 
     libxml_use_internal_errors(TRUE);
     if (!$this->xmlreader->isValid()) {
@@ -168,7 +203,7 @@ class VoiceXMLReader {
 
   private function _readVar($depth) {
     $varName = $this->xmlreader->getAttribute("name");
-    $this->variables[$depth][$varName] = VoiceXMLParser::readExpr($this->xmlreader->getAttribute("expr"));
+    $this->variables[$depth][$varName] = VoiceXMLBrowser::readExpr($this->xmlreader->getAttribute("expr"));
   }
   
   private function _readVxml() {
@@ -199,6 +234,7 @@ class VoiceXMLFormReader {
   private $prompts = array();
   private $items = array();
   private $currentItemIndex = 0;
+  private $repromptCounter = 0;
 
   public function __construct($xml) {
     $this->xml = $xml;
@@ -213,7 +249,11 @@ class VoiceXMLFormReader {
       if ($formitem === null) {
 	break;
       }
-      $formitem->collect($callback);
+      try {
+	$formitem->collect($callback);
+      } catch (VoiceXMLDisconnectException $e) {
+	break;
+      }
       $this->_formProcess();
     }
   }
@@ -227,7 +267,7 @@ class VoiceXMLFormReader {
 	case "form":
 	  break;
 	case "var":
-	  $this->variables[$this->xmlreader->getAttribute("name")] = VoiceXMLParser::readExpr($this->xmlreader->getAttribute("expr"));
+	  $this->variables[$this->xmlreader->getAttribute("name")] = VoiceXMLBrowser::readExpr($this->xmlreader->getAttribute("expr"));
 	  break;
 	case "property":
 	  break;
@@ -278,14 +318,8 @@ class VoiceXMLFormItem {
   public $prompts = array();
   public $options = array();
   public $type;
+  public $eventCatcher = array();
   
-  private function _generateName() {
-    $length = 10;
-    $randomString = substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, $length);
-    return $randomString;
-  }
-
-
   private function _initFormItem() {
     $this->type = $this->xmlreader->name;
     $name = $this->xmlreader->getAttribute("name");
@@ -293,16 +327,17 @@ class VoiceXMLFormItem {
       throw new UnhandedlVoiceXMLException('Cannot handle form item without an explicit name');
     }
     $this->name = $name;
-    $value = VoiceXMLParser::readExpr($this->xmlreader->getAttribute("expr"));
+    $value = VoiceXMLBrowser::readExpr($this->xmlreader->getAttribute("expr"));
     $this->value = ($value !== null ? $value : Undefined::Instance());
     $this->guardCondition = 
       // whether cond attribute resolve to true
-      VoiceXMLParser::readCond($this->xmlreader->getAttribute("cond"), $this->variables) 
+      VoiceXMLBrowser::readCond($this->xmlreader->getAttribute("cond"), $this->variables) 
       // whether current value is undefined
       && $this->value === Undefined::Instance();
   }
 
   public function __construct($xml, $variables) {
+    $this->eventCatcher = VoiceXMLBrowser::defaultEventCatcher();
     $this->xml =$xml;
     $this->variables = $variables;
     $this->xmlreader = new XMLReader();
@@ -323,7 +358,7 @@ class VoiceXMLFormItem {
     }
   }
 
-  public function collect($callback) {
+  public function collect(&$eventhandler) {
     $this->xmlreader->xml($this->xml);
     while($this->xmlreader->read()) {
       if ($this->xmlreader->nodeType == XMLReader::ELEMENT) {
@@ -334,11 +369,18 @@ class VoiceXMLFormItem {
 	  break;
 	case "audio":
 	case "prompt":
-	  $this->prompts[] = new VoiceXMLPrompt($this->xmlreader->readOuterXML());
+	  if ($this->xmlreader->getAttribute("cond" !== null) || $this->xmlreader->getAttribute("count" !== null)) {
+	    throw new UnhandedlVoiceXMLException('Cannot handle conditional prompts in form item '.$this->name);
+	  }
+	$p = new VoiceXMLPrompt();
+	$p->loadFromXML($this->xmlreader->readOuterXML());
+	$this->prompts[] = $p;
 	  $this->xmlreader->next();
 	  break;
 	case "option":
-	  $this->options[] = new VoiceXMLOption($this->xmlreader->readOuterXML());
+	  $o = new VoiceXMLOption();
+	  $o->loadFromXML($this->xmlreader->readOuterXML());
+	  $this->options[] = $o;
 	  $this->xmlreader->next();
 	  break;
 	case "enumerate":
@@ -348,6 +390,17 @@ class VoiceXMLFormItem {
 	case "grammar":
 	case "if":
 	  throw new UnhandedlVoiceXMLException('Cannot handle '.$this->xmlreader->name.' element in form item '.$this->name);
+	case "catch":
+	case "help":
+	case "noinput":
+	case "nomatch":
+	case "error":
+	  $catcher = new VoiceXMLCatch();
+	$catcher->loadFromXML($this->xmlreader->readOuterXML());
+	$this->eventCatcher[$catcher->type] = $catcher;
+	$this->xmlreader->next();
+	  break;
+
 	case "var":
 	case "assign":
 	case "property":
@@ -360,12 +413,6 @@ class VoiceXMLFormItem {
 	case "submit":
 	case "throw":
 	case "filled":
-	case "reprompt":
-	case "catch":
-	case "help":
-	case "noinput":
-	case "nomatch":
-	case "error":
 	  // for process only
 	  $this->xmlreader->next();
 	  break;
@@ -374,31 +421,51 @@ class VoiceXMLFormItem {
 	}
       }
     }
-    $choice = call_user_func_array($callback, array("option", array($this->options)));
-    call_user_func_array($callback, array("prompts", array($this->prompts)));
+    $eventhandler->onprompt($this->prompts);
+    return $this->_processInput($eventhandler);
   }
 
-  private function _collectNoinput($cb) {
-    call_user_func_array($cb, array("Noinput", array()));
-  }
-  private function _collectSubmit($cb) {
-    call_user_func_array($cb, array("Submit", array()));
-  }
-  private function _collectGoto($cb) {
-    call_user_func_array($cb, array("Goto", array()));
-  }
-  private function _collectFilled($cb) {
-    call_user_func_array($cb, array("Filled", array()));
+  private function _processEvent(&$eventhandler, $type) {
+    
+    $prompts = $this->eventCatcher[$type]->prompts;
+    if ($this->eventCatcher[$type]->reprompt) {
+      $prompts = array_merge($prompts, $this->prompts);
+    } else if ($this->eventCatcher[$type]->exit) {
+      throw new VoiceXMLDisconnectException();
+      }
+    call_user_func_array(array($eventhandler, "on" . $type), array());
+    $eventhandler->onprompt($prompts);
+    $this->repromptCounter++;
+    if ($this->repromptCounter < VoiceXMLBrowser::$maxReprompts) {
+      return $this->_processInput($eventhandler);
+    } else {
+      throw new VoiceXMLDisconnectException();
+    }
   }
 
+  private function _processInput(&$eventhandler) {
+    if (count($this->options)) {
+      $input = $eventhandler->onoption($this->options);
+      print_r ($input);
+      print "\n";
+      if ($input === null) {
+	return $this->_processEvent($eventhandler, "noinput");
+      } else if (!in_array($input, array_map(function ($op) { return $op->dtmf;}, $this->options))) {
+	return $this->_processEvent($eventhandler, "nomatch");
+      }
+      //    $this->promptCounter++;
+      $selectedOptionIndex = array_search($input, array_map(function ($op) { return $op->dtmf;}, $this->options));
+      return $this->options[$selectedOptionIndex]->value;
+    }
+  }
 
 }
 
 class VoiceXMLPrompt {
-  protected $texts = array();
-  protected $audios = array();
+  public $texts = array();
+  public $audios = array();
 
-  public function __construct($xml) {
+  public function loadFromXML($xml) {
     $xmlreader = new XMLReader();
     $xmlreader->xml($xml);
     while($xmlreader->read()) {
@@ -411,7 +478,9 @@ class VoiceXMLPrompt {
 	  if ($src === null) {
 	    throw new UnhandedlVoiceXMLException('Cannot handle audio element without src attribute');
 	  }
-	  $this->audios[]=VoiceXMLParser::absoluteUrl($src);
+	  $this->audios[]=VoiceXMLBrowser::absoluteUrl($src);
+	  break;
+	case "break":
 	  break;
 	case "value":
 	default:
@@ -429,7 +498,7 @@ class VoiceXMLOption {
   public $value;
   public $dtmf;
 
-  public function __construct($xml) {
+  public function loadFromXML($xml) {
     $xmlreader = new XMLReader();
     $xmlreader->xml($xml);
     $xmlreader->read();
@@ -442,3 +511,77 @@ class VoiceXMLOption {
     $this->dtmf =  str_split($dtmf, 1);
   }
 }
+
+class VoiceXMLCatch {
+  public $type;
+  public $prompts = array();
+  public $reprompt = false;
+  public $exit = false;
+
+  public function loadFromXML($xml) {
+    $xmlreader = new XMLReader();
+    $xmlreader->xml($xml);
+    while($xmlreader->read()) {
+      if ($xmlreader->nodeType == XMLReader::ELEMENT) {
+	switch($xmlreader->name) {
+	case "noinput":
+	case "cancel":
+	case "exit":
+	case "nomatch":
+	case "maxsppechtimeout":
+	case "connection.disconnect.hangup":
+	  $this->type = $xmlreader->name;
+	  break;
+	case "catch":
+	  $this->type = $xmlreader->getAttribute("event");
+	  break;
+	case "reprompt":
+	  $this->reprompt = true;
+	  break;
+	case "exit":
+	case "disconnect":
+	  $this->exit = true;
+	break;
+	case "audio":
+	case "prompt":
+	  $this->prompts = (new VoiceXMLPrompt())->loadFromXML($xmlreader->readOuterXML());
+	$xmlreader->next();
+	break;
+	default:
+	  throw new UnhandledVoiceXMLException('Did not expect '.$xmlreader->name.' in event catcher');
+	}
+      }
+    }
+  }
+}
+
+class VoiceXMLEventHandler {
+  public $onsuccess;
+  public $onnoinput;
+  public $onnomatch;
+  public $onexit;
+  public $ondisconnect;
+  public $onprompt;
+  public $onoption;
+  public $onrecord;
+
+
+
+  public function __construct() {
+    $void = 
+    $this->onsuccess = $this->onnoinput = $this->onnomatch = $this->onexit = $this->ondisconnect = function () {
+      return null;
+    };
+    $this->onprompt =$this->onoption = $this->onrecord = function ($param) {
+      return null;
+    };
+  }
+
+    public function __call($method, $args)
+    {
+        $closure = $this->$method;
+        return call_user_func_array($closure, $args);
+    }
+
+}
+
