@@ -2,10 +2,19 @@
 require("voicexml-reader.php");
 
 class VoiceXMLBrowserTest extends PHPUnit_Framework_TestCase {
+  public function testReadExpr() {
+    $this->assertEquals(VoiceXMLBrowser::readExpr("undefined"), Undefined::Instance());
+    $this->assertEquals(VoiceXMLBrowser::readExpr("'foo'"), 'foo');
+    $this->assertEquals(VoiceXMLBrowser::readExpr("254"), 254);
+  }
+
   public function testReadCond()
   {
     $variables = array("unity" => 1, "name" => "Foo");
     $this->assertTrue(VoiceXMLBrowser::readCond("name == 'Foo'", $variables));
+    $this->assertTrue(VoiceXMLBrowser::readCond("foo == undefined", $variables));
+    $this->assertTrue(VoiceXMLBrowser::readCond("name != undefined", $variables));
+    $this->assertFalse(VoiceXMLBrowser::readCond("foo != undefined", $variables));
     $this->assertFalse(VoiceXMLBrowser::readCond("name == 'Bar'", $variables));
     $this->assertTrue(VoiceXMLBrowser::readCond("unity == 1", $variables));
     $this->assertTrue(VoiceXMLBrowser::readCond("unity >= 1", $variables));
@@ -42,9 +51,9 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   {
     $xml = file_get_contents("tests/test.vxml");
     $this->assertTrue($this->vxml->load($xml, "http://example.org/"));
-    $variables =     array(0=>array('IVRTYPE' => 'VOICEGLUE',
+    $variables =     array('IVRTYPE' => 'VOICEGLUE',
 			   'USERID' => -1,
-				    'CONFESSIONID' => Undefined::Instance()));
+			   'CONFESSIONID' => Undefined::Instance());
     $this->assertEquals($variables, $this->vxml->variables);
   }
 
@@ -57,7 +66,10 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
     $xml = file_get_contents("tests/invalid.vxml");
     $this->vxml->load($xml);
   }
-
+  /**
+   *  @covers VoiceXMLReader::load
+   * @expectedException VoiceXMLErrorEvent
+   */
   public function testFormInteraction() {
     $order = 0;
     $eventhandler = new VoiceXMLEventHandler();
@@ -73,7 +85,7 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
 	$this->assertEquals($order,1);
 	$order++;
       };
-      return new VoiceXMLAudioRecord("foo.wav", 15000);
+      return new VoiceXMLAudioRecord("tests/test.wav", 15000);
     };
     $eventhandler->onmaxspeechtimeout = function () use (&$eventhandler, &$order) {
       $eventhandler->onrecord = function () use (&$eventhandler, &$order) {
@@ -82,7 +94,7 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
 	  $this->assertEquals($order,2);
 	  $order++;
 	};	
-	return new VoiceXMLAudioRecord("foo.wav", 5000);
+	return new VoiceXMLAudioRecord("tests/test.wav", 5000);
       };
     };
     $eventhandler->onoption = function ($options) use (&$eventhandler, &$order) {

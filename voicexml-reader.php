@@ -1,7 +1,16 @@
 <?php
+require 'vendor/autoload.php';
+
 class InvalidVoiceXMLException extends Exception {};
 class UnhandedlVoiceXMLException extends Exception {};
 class VoiceXMLDisconnectException extends Exception {};
+class VoiceXMLErrorEvent extends Exception { 
+  public $type;
+  public function __construct($type, $message) {
+    $this->type = $type;
+    $this->message = $message;
+  }
+}
 
 class Undefined {
   public static function Instance() {
@@ -12,6 +21,11 @@ class Undefined {
     return $inst;
   }
 
+  public function __toString()
+  {
+    return "undefined";
+  }
+ 
   private function __construct() {}
 }
 
@@ -22,6 +36,8 @@ class VoiceXMLBrowser {
   public static $url;
   public static function readExpr($varValue) {
     if ($varValue == null || $varValue == "") {
+      $varValue = Undefined::Instance();
+    } elseif ($varValue === "undefined") {
       $varValue = Undefined::Instance();
     } elseif (preg_match("/^'[^']*'$/", $varValue) 
 	      || preg_match("/^\"[^\"]*\"$/", $varValue)) {
@@ -58,19 +74,21 @@ class VoiceXMLBrowser {
     } elseif (preg_match("/false/i", $cond)) {
       return FALSE;
     } elseif (preg_match("/^ *([a-zA-Z_][^ =<>!]*) *(==|>|<|!=|<=|>=) *([^ ]*) *$/", $cond, $matches)) {
+      $value = VoiceXMLBrowser::readExpr($matches[3]);
+      $variableIsUndefined = !array_key_exists($matches[1],$variables);
       switch ($matches[2]) {
       case "==":
-	return $variables[$matches[1]] == VoiceXMLBrowser::readExpr($matches[3]);
+	return ($value === Undefined::Instance() && $variableIsUndefined) || $variables[$matches[1]] == $value;
       case ">":
-	return $variables[$matches[1]] > VoiceXMLBrowser::readExpr($matches[3]);
+	return $variables[$matches[1]] > $value;
       case "<":
-	return $variables[$matches[1]] < VoiceXMLBrowser::readExpr($matches[3]);
+	return $variables[$matches[1]] < $value;
       case "<=":
-	return $variables[$matches[1]] <= VoiceXMLBrowser::readExpr($matches[3]);
+	return $variables[$matches[1]] <= $value;
       case ">=":
-	return $variables[$matches[1]] >= VoiceXMLBrowser::readExpr($matches[3]);
+	return $variables[$matches[1]] >= $value;
       case "!=":
-	return $variables[$matches[1]] != VoiceXMLBrowser::readExpr($matches[3]);
+	return !$variableIsUndefined && ($value === Undefined::Instance() || $variables[$matches[1]] != $value);
       }
     } else {
       throw new UnhandedlVoiceXMLException('Cannot handle conditions that are not simple comparisons: '.$cond );
@@ -148,6 +166,27 @@ class VoiceXMLBrowser {
       return $eventCatcher;
     }
 
+    public static function fetch($url, $method, $params, $client = null) {
+      if ($client == null) {
+	$client = new Guzzle\Http\Client();
+      }
+      if ($method == "GET") {
+	$req = $client->get($url, array(), null, array("query" => $params));
+      } else {
+	// TODO: limit files that can be sent to a predefined path
+	$req = $client->post($url, array(), 
+			     // prefix filepath with @ per guzzle convention
+			     array_map(function ($p) { if (is_object($p) && $p->file) { return "@".$p->file;} else { return $p;}}, $params));
+      }
+      try {
+	$response = $req->send();
+      } catch (Guzzle\Http\Exception\BadResponseException $e) {
+	throw new VoiceXMLErrorEvent("bad.fetch", "Fetching ".$url." via HTTP ".$method." generated an error ".$e->getResponse()->getStatusCode(). "(".$e->getMessage().")");
+      }
+      $response = $req->send();
+      $vxml = new VoiceXMLReader();
+      $vmlx->load($response, $url);
+    }
 }
 
 class VoiceXMLReader {
@@ -180,7 +219,6 @@ class VoiceXMLReader {
   }
 
   protected function _read() {
-    $depth = -1;
     while ($this->xmlreader->read()) {
       if (!$this->xmlreader->isValid()) {
 	throw new InvalidVoiceXMLException('VoiceXML document not valid: '.libxml_get_last_error()->message);
@@ -192,22 +230,11 @@ class VoiceXMLReader {
 	case "property":
 	case "form":
 	case "disconnect":
-	  call_user_func_array(array($this,'_read' . ucfirst($this->xmlreader->name)), array($depth));
+	  call_user_func_array(array($this,'_read' . ucfirst($this->xmlreader->name)), array());
 	  break;
 	default:
 	  throw new UnhandedlVoiceXMLException('Cannot handle element '.$this->xmlreader->name);
 	}
-	$depth++;
-	$this->variables[$depth]=array();
-	$this->properties[$depth]=array();
-      }
-      if ($this->xmlreader->nodeType == XMLReader::END_ELEMENT || $this->xmlreader->isEmptyElement) {
-	
-	if ($depth > 0) {
-	  unset($this->variables[$depth]);
-	  unset($this->properties[$depth]);
-	}
-	$depth--;
       }
     }
   }
@@ -216,9 +243,9 @@ class VoiceXMLReader {
     $this->xmlreader->next("vxml");
   }
 
-  private function _readVar($depth) {
+  private function _readVar() {
     $varName = $this->xmlreader->getAttribute("name");
-    $this->variables[$depth][$varName] = VoiceXMLBrowser::readExpr($this->xmlreader->getAttribute("expr"));
+    $this->variables[$varName] = VoiceXMLBrowser::readExpr($this->xmlreader->getAttribute("expr"));
   }
   
   private function _readVxml() {
@@ -228,14 +255,18 @@ class VoiceXMLReader {
     }
   }
 
-  private function _readProperty($depth) {
-    $this->properties[$depth][$this->xmlreader->getAttribute("name")] = $this->xmlreader->getAttribute("value");
+  private function _readProperty() {
+    $this->properties[$this->xmlreader->getAttribute("name")] = $this->xmlreader->getAttribute("value");
   }
 
-  private function _readForm($depth) {
+  private function _readForm() {
     $xml = $this->xmlreader->readOuterXML();
-    $form = new VoiceXMLFormReader($xml);
-    $form->process($this->callback);
+    $form = new VoiceXMLFormReader($this->variables);
+    $form->loadFromXML($xml);
+    $next = $form->process($this->callback);
+    if ($next !== null && $next->url) {
+
+    }
     $this->xmlreader->next();
   }  
 }
@@ -248,11 +279,16 @@ class VoiceXMLFormReader {
   private $nextFormItem = null;
   private $prompts = array();
   private $items = array();
+  private $nameditems = array();
   private $currentItemIndex = 0;
   private $repromptCounter = 0;
   private $maxrecordtime;
 
-  public function __construct($xml) {
+  public function __construct($variables) {
+    $this->variables = $variables;
+  }
+
+  public function loadFromXML($xml) {
     $this->xml = $xml;
   }
 
@@ -273,7 +309,18 @@ class VoiceXMLFormReader {
       } catch (VoiceXMLDisconnectException $e) {
 	break;
       }
-      $this->_formProcess();
+      $next = $formitem->execute($this->variables);
+      if ($next->nextformitemname) {
+	if (array_key_exists($next->nextformitemname, $this->nameditems)) {
+	  $this->nextFormItem = $this->nameditems[$next->nextformitemname];
+	} else {
+	  throw new VoiceXMLErrorEvent("error.badfetch", "Asked to reach unknown form item  with name ".$next->nextformitemname);
+	}
+      } else if ($next->url) {
+	$this->nextFormItem = null;
+	VoiceXMLBrowser::fetch($next->url, $next->method, $next->params);
+	break;
+      }
     }
   }
 
@@ -293,7 +340,11 @@ class VoiceXMLFormReader {
 	case "record":
 	case "field":
 	case "block":
-	  $this->items[] = new VoiceXMLFormItem($this->xmlreader->readOuterXML(), $this->variables);
+	  $item = new VoiceXMLFormItem($this->xmlreader->readOuterXML(), $this->variables);
+	$this->items[] = $item;
+	if ($item->name) {
+	  $this->nameditems[$item->name] = $item;
+	}
 	$this->xmlreader->next();
 	break;
 	default:
@@ -410,7 +461,6 @@ class VoiceXMLFormItem {
 	case "script":
 	case "link":
 	case "grammar":
-	case "if":
 	  throw new UnhandedlVoiceXMLException('Cannot handle '.$this->xmlreader->name.' element in form item '.$this->name);
 	case "catch":
 	case "help":
@@ -422,7 +472,7 @@ class VoiceXMLFormItem {
 	$this->eventCatcher[$catcher->type] = $catcher;
 	$this->xmlreader->next();
 	  break;
-
+	case "if":
 	case "var":
 	case "assign":
 	case "property":
@@ -490,7 +540,157 @@ class VoiceXMLFormItem {
     }
   }
 
+  public function execute($variables) {
+    $next = new VoiceXMLNext($variables);
+    $next->loadFromXML($this->xml);
+    return $next;
+  }
 }
+
+class VoiceXMLNext {
+  public $method;
+  public $nextformitemname;
+  public $url;
+  public $done = false;
+  public $params = array();
+  private $variables = array();
+
+  public function __construct($variables) {
+    $this->variables = $variables;
+  }
+
+  private function _merge($next) {
+
+  }
+
+  public function loadFromXML($xml) {
+    $xmlreader = new XMLReader();
+    $xmlreader->xml($xml);
+    $nestedConditionState = array();
+    $ignore = false;
+    while($xmlreader->read()) {
+      if ($this->done) {
+	break;
+      }
+      if ($xmlreader->nodeType == XMLReader::ELEMENT && !$this->done && !$ignore) {
+	if (count($nestedConditionState) && $nestedConditionState[0]["goToElse"] && $xmlreader->name!="else" && $xmlreader->name!="elseif") {
+	  $xmlreader->next();
+	}
+	switch($xmlreader->name) {
+	case "assign":
+	  $name = $xmlreader->getAttribute("name");
+	  if (!array_key_exists($name, $this->variables)) {
+	    throw new VoiceXMLErrorEvent("error.semantic", "<assign> to a non-declared variable ".$name);
+	  }
+	  // intentional no break
+	case "var":
+	  $this->variables[$xmlreader->getAttribute("name")] = VoiceXMLBrowser::readExpr($this->xmlreader->getAttribute("expr"));
+	  $xmlreader->next();
+	  break;
+	case "clear":
+	  $clearedVariables = preg_split("/\s+/",$xmlreader->getAttribute("namelist"));
+	  foreach($clearedVariables as $name) {
+	    if (!array_key_exists($name, $this->variables)) {
+	      throw new VoiceXMLErrorEvent("error.semantic", "<clear> includes a non-declared variable ".$name);
+	    }
+	    $this->variables[$name] = Undefined::Instance();
+	    // TODO: if the variable name corresponds to a form item,
+	    // then the form item's prompt counter and event counters are reset
+	  }
+	  $xmlreader->next();
+	  break;
+	case "elseif":
+	  if ($nestedConditionState[0]["stopAtElse"]) {
+	    $ignore = true;
+	    $xmlreader->next();
+	  }
+	  // intentional no break  
+	case "if":
+	  if (VoiceXMLBrowser::readCond($xmlreader->getAttribute("cond"), $this->variables)) {
+	    array_unshift($nestedConditionState, array("stopAtElse" => true, "goToElse" => false));
+	  } else {
+	    array_unshift($nestedConditionState, array("stopAtElse" => false, "goToElse" => true));
+	  }
+	  break;
+	case "else":
+	  if ($nestedConditionState[0]["goToElse"]) {
+	    $nestedConditionState[0]["goToElse"] = false;
+	  } else if ($nestedConditionState[0]["stopAtElse"]) {
+	    $ignore = true;
+	  }
+	  $xmlreader->next();
+	  break;
+	case "disconnect":
+	case "exit":
+	  throw new VoiceXMLDisconnectException();
+	case "goto":
+	  if ($xmlreader->getAttribute("expritem") !== null) {
+	    throw new UnhandedlVoiceXMLException('Can’t handle expritem attribute in goto in form item');
+	  }
+	  $nextitem = $xmlreader->getAttribute("nextitem");
+	  $next = $xmlreader->getAttribute("next");
+	  if ($nextitem !== null) {
+	    $this->nextformitemname = $nextitem;
+	    $this->done = true;
+	  } else if ($next !== null) {
+	    $matches = array();
+	    if (preg_match('/^#(.*)$/', $next, $matches)) {
+	      $this->nextformitem = $matches[1];
+	      $this->done = true;
+	    } else {
+	      $this->method = "GET";
+	      $this->url = VoiceXMLBrowser::absoluteUrl($next);
+	      $this->params = $this->variables;
+	      $this->done = true;
+	    }
+	  } else {
+	    throw new InvalidVoiceXMLException('<goto> element without next or nextitem attribute');
+	  }
+	  // TODO
+	  break;
+	case "submit":
+	  if ($xmlreader->getAttribute("expr") !== null) {
+	    throw new UnhandedlVoiceXMLException('Can’t handle expr attribute in submit');
+	  }
+	  $this->url = VoiceXMLBrowser::absoluteUrl($xmlreader->getAttribute("next"));
+	  $method = $xmlreader->getAttribute("method");
+	  $this->method = "GET";
+	  if ($method !== null) {
+	    $this->method = strtoupper($method);
+	  }
+	  $namelist = $xmlreader->getAttribute("namelist");
+	  $this->params = array_filter($this->variables, function($i) { return $i !== Undefined::Instance();});
+	  if ($namelist !== null) {
+	    $selectedNames = preg_split("/\s+/", $namelist);
+	    $this->params = array_intersect_key($this->params, array_flip($selectedNames));
+	  }
+	  $this->done = true;
+	  // TODO
+	  break;
+	case "filled":
+	  // A <filled> element in an input item cannot specify a namelist
+	  // if a namelist is specified, then an error.badfetch is thrown
+	  if ($xmlreader->getAttribute("namelist") || $xmlreader->getAttribute("mode")) {
+	    throw new VoiceXMLErrorEvent("error.badfetch", "namelist attribute on filled element in form item is forbidden");
+	  }
+	  break;
+	case "throw":
+	  throw new VoiceXMLErrorEvent($xmlreader->getAttribute("event"), $xmlreader->getAttribute("message"));
+	case "log":
+	case "return":
+	  throw new UnhandedlVoiceXMLException('Can’t handle '.$xmlreader->name.' element');
+	default:
+	  break;
+	}
+      } elseif ($xmlreader->nodeType == XMLReader::END_ELEMENT && $xmlreader->name=="if") {
+	array_shift($nestedConditionState);
+	$ignore = false;
+      }
+    }
+  }
+}
+
+
 
 class VoiceXMLPrompt {
   public $texts = array();
@@ -588,6 +788,7 @@ class VoiceXMLCatch {
   }
 }
 
+
 class VoiceXMLAudioRecord {
   public $file;
   public $length;
@@ -606,9 +807,10 @@ class VoiceXMLEventHandler {
   public $onoption;
   public $onrecord;
   public $onmaxspeechtimeout;
+  public $onerror;
 
   public function __construct() {
-    $this->onsuccess = $this->onnoinput = $this->onnomatch = $this->onexit = $this->ondisconnect = $this->onrecord = $this->onmaxspeechtimeout = function () {
+    $this->onerror = $this->onnoinput = $this->onnomatch = $this->onexit = $this->ondisconnect = $this->onrecord = $this->onmaxspeechtimeout = function () {
       return null;
     };
     $this->onprompt =$this->onoption =  function ($param) {
