@@ -250,7 +250,10 @@ class VoiceXMLFormReader {
 	break;
       }
       try {
-	$formitem->collect($callback);
+	$value = $formitem->collect($callback);
+	if ($formitem->name)  {
+	  $this->variables[$formitem->name] = $value;
+	}
       } catch (VoiceXMLDisconnectException $e) {
 	break;
       }
@@ -444,6 +447,9 @@ class VoiceXMLFormItem {
   }
 
   private function _processInput(&$eventhandler) {
+    if (!$this->expectsInput) {
+      return TRUE;
+    }
     if (count($this->options)) {
       $input = $eventhandler->onoption($this->options);
       print_r ($input);
