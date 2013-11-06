@@ -33,7 +33,19 @@ class VoiceXMLBrowser {
   public static $maxReprompts = 10;
   public static $defaultMaxTime = 10000;
 
-  public static $url;
+  protected static $url;
+  protected static $fileuploadPathFilter;
+
+
+
+  public static function setUrl($url) {
+    self::$url = $url;
+  }
+
+  public static function setUploadFilter($filter) {
+    self::$fileuploadPathFilter = $filter;
+  }
+
   public static function readExpr($varValue) {
     if ($varValue == null || $varValue == "") {
       $varValue = Undefined::Instance();
@@ -74,7 +86,7 @@ class VoiceXMLBrowser {
     } elseif (preg_match("/false/i", $cond)) {
       return FALSE;
     } elseif (preg_match("/^ *([a-zA-Z_][^ =<>!]*) *(==|>|<|!=|<=|>=) *([^ ]*) *$/", $cond, $matches)) {
-      $value = VoiceXMLBrowser::readExpr($matches[3]);
+      $value = self::readExpr($matches[3]);
       $variableIsUndefined = !array_key_exists($matches[1],$variables);
       switch ($matches[2]) {
       case "==":
@@ -95,9 +107,6 @@ class VoiceXMLBrowser {
     }
   }
 
-  public static function setUrl($url) {
-    VoiceXMLBrowser::$url = $url;
-  }
 
     // from http://nashruddin.com/PHP_Script_for_Converting_Relative_to_Absolute_URL
     public function absoluteUrl($rel)
@@ -105,16 +114,16 @@ class VoiceXMLBrowser {
       /* return if already absolute URL */
         if (parse_url($rel, PHP_URL_SCHEME) != '') return $rel;
 
-	if (VoiceXMLBrowser::$url === null) {
+	if (self::$url === null) {
 	  throw new Exception("No base URL set, can't resolve relative URL ".$rel);
 	}
 
         /* queries and anchors */
-        if ($rel[0]=='#' || $rel[0]=='?') return VoiceXMLBrowser::$url.$rel;
+        if ($rel[0]=='#' || $rel[0]=='?') return self::$url.$rel;
 
         /* parse base URL and convert to local variables:
          $scheme, $host, $path */
-        extract(parse_url(VoiceXMLBrowser::$url));
+        extract(parse_url(self::$url));
 
         /* remove non-directory element from path */
         $path = preg_replace('#/[^/]*$#', '', $path);
@@ -173,10 +182,26 @@ class VoiceXMLBrowser {
       if ($method == "GET") {
 	$req = $client->get($url, array(), null, array("query" => $params));
       } else {
-	// TODO: limit files that can be sent to a predefined path
+	$filteredParams = array();
+	foreach ($params as $p) {
+	  // prefix filepath with @ per guzzle convention
+	  if (is_object($p) && $p->file) {
+	    // limit files that can be sent to path matching a filter
+	    if (!is_callable(self::$fileuploadPathFilter)) {
+	      throw new VoiceXMLErrorEvent("bad.fetch", "Could not upload file ".$p->file." (no upload filter defined)");
+	    }
+	    $closure = self::$fileuploadPathFilter;
+	    if (call_user_func_array($closure, array($p->file))) {
+	      $filteredParams[] = "@".$p->file;
+	    } else {
+	      throw new VoiceXMLErrorEvent("bad.fetch", "Could not upload file ".$p->file." (unauthorized by filter)");
+	    }
+	  } else {
+	    $filteredParams[] = $p;
+	  }
+	}
 	$req = $client->post($url, array(), 
-			     // prefix filepath with @ per guzzle convention
-			     array_map(function ($p) { if (is_object($p) && $p->file) { return "@".$p->file;} else { return $p;}}, $params));
+			     $filteredParams);
       }
       try {
 	$response = $req->send();
@@ -646,7 +671,6 @@ class VoiceXMLNext {
 	  } else {
 	    throw new InvalidVoiceXMLException('<goto> element without next or nextitem attribute');
 	  }
-	  // TODO
 	  break;
 	case "submit":
 	  if ($xmlreader->getAttribute("expr") !== null) {
@@ -665,7 +689,6 @@ class VoiceXMLNext {
 	    $this->params = array_intersect_key($this->params, array_flip($selectedNames));
 	  }
 	  $this->done = true;
-	  // TODO
 	  break;
 	case "filled":
 	  // A <filled> element in an input item cannot specify a namelist

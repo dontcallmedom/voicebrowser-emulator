@@ -37,6 +37,13 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   protected function setUp()
   {
     $this->vxml = new VoiceXMLReader();
+    VoiceXMLBrowser::setUploadFilter(function ($path) {
+	// only allow files given with relatives paths 
+	// that are under the current directory 
+	$realpath = realpath($path);
+	$path_pos = strrpos($realpath, $path);
+	return ($realpath != $path &&  $path_pos !== false && $path_pos == strlen($realpath) - strlen($path));
+      });
   }
   
   protected function tearDown()
@@ -68,7 +75,6 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   }
   /**
    *  @covers VoiceXMLReader::load
-   * @expectedException VoiceXMLErrorEvent
    */
   public function testFormInteraction() {
     $order = 0;
