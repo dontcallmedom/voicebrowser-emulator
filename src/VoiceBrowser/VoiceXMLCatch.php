@@ -1,6 +1,6 @@
 <?php
 namespace VoiceBrowser;
-use VoiceBrowser\Exception\UnhandedlVoiceXMLException;
+use VoiceBrowser\Exception\UnhandledVoiceXMLException;
 
 class VoiceXMLCatch {
   public $type;

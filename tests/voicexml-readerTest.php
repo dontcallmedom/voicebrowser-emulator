@@ -61,6 +61,7 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   {
     $xml = file_get_contents("tests/test.vxml");
     $this->assertTrue($this->vxml->load($xml, "http://example.org/"));
+    $this->vxml->read();
     $variables =     array('IVRTYPE' => 'VOICEGLUE',
 			   'USERID' => -1,
 			   'CONFESSIONID' => Undefined::Instance());
@@ -75,6 +76,7 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   {
     $xml = file_get_contents("tests/invalid.vxml");
     $this->vxml->load($xml);
+    $this->vxml->read();
   }
   /**
    *  @covers VoiceXMLReader::load
@@ -131,6 +133,7 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
     $this->vxml->callback = $eventhandler;
     $xml = file_get_contents("tests/test.vxml");
     $this->assertTrue($this->vxml->load($xml, "http://example.org/"));
+    $this->vxml->read();
   }
 
 }

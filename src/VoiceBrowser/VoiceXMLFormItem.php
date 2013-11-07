@@ -21,7 +21,7 @@ class VoiceXMLFormItem {
     $this->type = $this->xmlreader->name;
     $name = $this->xmlreader->getAttribute("name");
     if ($name == null && $this->xmlreader->name != "block") {
-      throw new UnhandedlVoiceXMLException('Cannot handle form item without an explicit name');
+      throw new UnhandledVoiceXMLException('Cannot handle form item without an explicit name');
     }
     $this->name = $name;
     $value = VoiceBrowser::readExpr($this->xmlreader->getAttribute("expr"));
@@ -70,7 +70,7 @@ class VoiceXMLFormItem {
 	case "audio":
 	case "prompt":
 	  if ($this->xmlreader->getAttribute("cond" !== null) || $this->xmlreader->getAttribute("count" !== null)) {
-	    throw new UnhandedlVoiceXMLException('Cannot handle conditional prompts in form item '.$this->name);
+	    throw new UnhandledVoiceXMLException('Cannot handle conditional prompts in form item '.$this->name);
 	  }
 	$p = new VoiceXMLPrompt();
 	$p->loadFromXML($this->xmlreader->readOuterXML());
@@ -88,7 +88,7 @@ class VoiceXMLFormItem {
 	case "script":
 	case "link":
 	case "grammar":
-	  throw new UnhandedlVoiceXMLException('Cannot handle '.$this->xmlreader->name.' element in form item '.$this->name);
+	  throw new UnhandledVoiceXMLException('Cannot handle '.$this->xmlreader->name.' element in form item '.$this->name);
 	case "catch":
 	case "help":
 	case "noinput":
@@ -116,7 +116,7 @@ class VoiceXMLFormItem {
 	  $this->xmlreader->next();
 	  break;
 	default:
-	  throw new UnhandedlVoiceXMLException('Unexpected '.$this->xmlreader->name.' element in form item '.$this->name);
+	  throw new UnhandledVoiceXMLException('Unexpected '.$this->xmlreader->name.' element in form item '.$this->name);
 	}
       }
     }

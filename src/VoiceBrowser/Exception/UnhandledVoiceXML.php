@@ -1,4 +1,4 @@
 <?php
 namespace VoiceBrowser\Exception;
 
-class UnhandedlVoiceXMLException extends \UnexpectedValueException {};
+class UnhandledVoiceXML extends \UnexpectedValueException {};

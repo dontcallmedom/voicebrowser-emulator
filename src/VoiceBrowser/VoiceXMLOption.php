@@ -1,6 +1,6 @@
 <?php
 namespace VoiceBrowser;
-use VoiceBrowser\Exception\UnhandedlVoiceXMLException;
+use VoiceBrowser\Exception\UnhandledVoiceXMLException;
 
 class VoiceXMLOption {
   public $label;
@@ -15,7 +15,7 @@ class VoiceXMLOption {
     $this->value = $xmlreader->getAttribute("value");
     $dtmf = $xmlreader->getAttribute("dtmf");
     if ($dtmf === null) {
-      throw new UnhandedlVoiceXMLException('Cannot handle option without dtmf attribute');
+      throw new UnhandledVoiceXMLException('Cannot handle option without dtmf attribute');
     }
     $this->dtmf =  str_split($dtmf, 1);
   }

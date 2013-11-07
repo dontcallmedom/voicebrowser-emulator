@@ -2,13 +2,13 @@
 namespace VoiceBrowser;
 use VoiceBrowser\Exception\VoiceXMLDisconnectException, VoiceBrowser\Exception\VoiceXMLErrorEvent;
 
-class VoiceBrowser {
+final class VoiceBrowser {
   public static $maxReprompts = 10;
   public static $defaultMaxTime = 10000;
 
   protected static $url;
   protected static $fileuploadPathFilter;
-
+  protected static $vxml;
 
 
   public static function setUrl($url) {
@@ -30,7 +30,7 @@ class VoiceBrowser {
     } elseif (is_numeric($varValue)) {
       $varValue = (int)$varValue;
     } else {
-      throw new UnhandedlVoiceXMLException('cannot handle attribute expr with values that are not string or number: '.$varValue );
+      throw new UnhandledVoiceXMLException('cannot handle attribute expr with values that are not string or number: '.$varValue );
     }
     return $varValue;
   }
@@ -76,7 +76,7 @@ class VoiceBrowser {
 	return !$variableIsUndefined && ($value === Undefined::Instance() || $variables[$matches[1]] != $value);
       }
     } else {
-      throw new UnhandedlVoiceXMLException('Cannot handle conditions that are not simple comparisons: '.$cond );
+      throw new UnhandledVoiceXMLException('Cannot handle conditions that are not simple comparisons: '.$cond );
     }
   }
 
@@ -182,8 +182,12 @@ class VoiceBrowser {
 	throw new VoiceXMLErrorEvent("bad.fetch", "Fetching ".$url." via HTTP ".$method." generated an error ".$e->getResponse()->getStatusCode(). "(".$e->getMessage().")", $e);
       }
       $response = $req->send();
-      $vxml = new VoiceXMLReader();
-      $vmlx->load($response, $url);
+      self::$vxml = new VoiceXMLReader();
+      return self::$vxml->load($response->getBody(), $url);
+    }
+    
+    public static function play() {
+      self::$vxml->read();
     }
 }
 

@@ -1,6 +1,6 @@
 <?php
 namespace VoiceBrowser;
-use VoiceBrowser\Exception\VoiceXMLDisconnectException, VoiceBrowser\Exception\UnhandedlVoiceXMLException, VoiceBrowser\Exception\InvalidVoiceXML, VoiceBrowser\Exception\VoiceXMLErrorEvent;
+use VoiceBrowser\Exception\VoiceXMLDisconnectException, VoiceBrowser\Exception\UnhandledVoiceXMLException, VoiceBrowser\Exception\InvalidVoiceXML, VoiceBrowser\Exception\VoiceXMLErrorEvent;
 
 class VoiceXMLNext {
   public $method;
@@ -80,7 +80,7 @@ class VoiceXMLNext {
 	  throw new VoiceXMLDisconnectException();
 	case "goto":
 	  if ($xmlreader->getAttribute("expritem") !== null) {
-	    throw new UnhandedlVoiceXMLException('Can’t handle expritem attribute in goto in form item');
+	    throw new UnhandledVoiceXMLException('Can’t handle expritem attribute in goto in form item');
 	  }
 	  $nextitem = $xmlreader->getAttribute("nextitem");
 	  $next = $xmlreader->getAttribute("next");
@@ -104,7 +104,7 @@ class VoiceXMLNext {
 	  break;
 	case "submit":
 	  if ($xmlreader->getAttribute("expr") !== null) {
-	    throw new UnhandedlVoiceXMLException('Can’t handle expr attribute in submit');
+	    throw new UnhandledVoiceXMLException('Can’t handle expr attribute in submit');
 	  }
 	  $this->url = VoiceBrowser::absoluteUrl($xmlreader->getAttribute("next"));
 	  $method = $xmlreader->getAttribute("method");
@@ -131,7 +131,7 @@ class VoiceXMLNext {
 	  throw new VoiceXMLErrorEvent($xmlreader->getAttribute("event"), $xmlreader->getAttribute("message"));
 	case "log":
 	case "return":
-	  throw new UnhandedlVoiceXMLException('Can’t handle '.$xmlreader->name.' element');
+	  throw new UnhandledVoiceXMLException('Can’t handle '.$xmlreader->name.' element');
 	default:
 	  break;
 	}
