@@ -1,8 +1,16 @@
 {
+    "name": "sbc4d/voicebrowser",
+    "type": "library",
+    "description": "A PHP based voicebrowser emulator for simplified VoiceXML",
+    "homepage": "https://github.com/dontcallmedom/voicebrowser-emulator",
+    "authors": [
+    	{ "name": "Dominique Hazaël-Massieux"}
+    ], 
     "require": {
-        "guzzle/guzzle": "~3.7"
-    },
+        "guzzle/guzzle": "~3.7",
+	"php": ">=5.4.0"
+    },    
     "autoload": {
-        "psr-0": { "": "src/" }
+        "psr-0": { "VoiceBrowser\\": "src/" }
     }
 }

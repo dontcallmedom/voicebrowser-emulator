@@ -9,5 +9,5 @@ Depends on Guzzle for HTTP interactions:
 curl -sS https://getcomposer.org/installer | php# Install Composer
 
 # Add Guzzle as a dependency
-php composer.phar require guzzle/guzzle:~3.7
+php composer.phar install
 ```
