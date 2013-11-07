@@ -148,7 +148,7 @@ class VoiceBrowser {
       return $eventCatcher;
     }
 
-    public static function fetch($url, $method, $params, $client = null) {
+    public static function fetch($url, $method, $params, &$client = null) {
       if ($client == null) {
 	$client = new \Guzzle\Http\Client();
       }
