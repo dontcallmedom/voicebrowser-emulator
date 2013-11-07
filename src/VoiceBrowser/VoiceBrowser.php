@@ -2,13 +2,13 @@
 namespace VoiceBrowser;
 use VoiceBrowser\Exception\VoiceXMLDisconnectException, VoiceBrowser\Exception\VoiceXMLErrorEvent;
 
-class VoiceBrowser {
+final class VoiceBrowser {
   public static $maxReprompts = 10;
   public static $defaultMaxTime = 10000;
 
   protected static $url;
   protected static $fileuploadPathFilter;
-
+  protected static $vxml;
 
 
   public static function setUrl($url) {
@@ -182,8 +182,12 @@ class VoiceBrowser {
 	throw new VoiceXMLErrorEvent("bad.fetch", "Fetching ".$url." via HTTP ".$method." generated an error ".$e->getResponse()->getStatusCode(). "(".$e->getMessage().")", $e);
       }
       $response = $req->send();
-      $vxml = new VoiceXMLReader();
-      $vmlx->load($response, $url);
+      $this->vxml = new VoiceXMLReader();
+      $this->vxml->load($response, $url);
+    }
+    
+    public static function play() {
+      $this->vxml->read();
     }
 }
 

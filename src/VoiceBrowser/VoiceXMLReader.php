@@ -27,11 +27,10 @@ class VoiceXMLReader {
     if (!$this->xmlreader->isValid()) {
       throw new InvalidVoiceXML('VoiceXML document not valid: '.libxml_get_last_error()->message);
     }
-    $this->_read();
     return true;
   }
 
-  protected function _read() {
+  public function read() {
     while ($this->xmlreader->read()) {
       if (!$this->xmlreader->isValid()) {
 	throw new InvalidVoiceXML('VoiceXML document not valid: '.libxml_get_last_error()->message);
