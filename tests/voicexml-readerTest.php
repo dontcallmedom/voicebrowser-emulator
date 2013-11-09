@@ -60,16 +60,10 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   {
     $xml = file_get_contents("tests/test.vxml");
     $this->assertTrue($this->vxml->load($xml, "http://example.org/"));
-    $this->vxml->read();
-    $variables =     array('IVRTYPE' => 'VOICEGLUE',
-			   'USERID' => -1,
-			   'CONFESSIONID' => Undefined::Instance());
-    $this->assertEquals($variables, $this->vxml->variables);
   }
 
   /**
    * @covers VoiceXMLReader::load
-   * @expectedException VoiceBrowser\Exception\InvalidVoiceXML
    */
   public function testLoadingInvalidVoiceXMLThrows()
   {
@@ -79,60 +73,29 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   }
   /**
    *  @covers VoiceXMLReader::load
-   *  @expectedException VoiceBrowser\Exception\VoiceXMLErrorEvent
    */
   public function testFormInteraction() {
-    $order = 0;
-    $eventhandler = new VoiceXMLEventHandler();
-    $eventhandler->onprompt = function ($prompts) use (&$order) {
-      $this->assertEquals($prompts[0]->texts[0],"Please tell us who you are");
-      $this->assertEquals($order,0);
-      $order++;
-    };
-    $eventhandler->onrecord = function () use (&$eventhandler, &$order) {
-      $eventhandler->onprompt = function ($prompts) use (&$order) {
-	$this->assertEquals($prompts[0]->texts[0],"DEFAULT Too long");
-	$this->assertEquals($prompts[1]->texts[0],"Please tell us who you are");
-	$this->assertEquals($order,1);
-	$order++;
-      };
-      return new VoiceXMLAudioRecord("tests/test.wav", 15000);
-    };
-    $eventhandler->onmaxspeechtimeout = function () use (&$eventhandler, &$order) {
-      $eventhandler->onrecord = function () use (&$eventhandler, &$order) {
-	$eventhandler->onprompt = function ($prompts) use (&$order) {
-	  $this->assertEquals($prompts[0]->texts[0],"Please select what you to want to hear next");
-	  $this->assertEquals($order,2);
-	  $order++;
-	};	
-	return new VoiceXMLAudioRecord("tests/test.wav", 5000);
-      };
-    };
-    $eventhandler->onoption = function ($options) use (&$eventhandler, &$order) {
-      $eventhandler->onnoinput = function () use (&$eventhandler, &$order) {
-	$eventhandler->onprompt = function ($prompts) use (&$order) {
-	  $this->assertEquals($prompts[0]->texts[0],"Please select what you to want to hear next");
-	  $this->assertEquals($order,3);
-	  $order++;
-	};	
-	$eventhandler->onoption = function ($options) use (&$eventhandler, &$order) {
-	  $this->assertEquals($options[0]->label, "Listen to Ekene");
-	  $this->assertEquals($options[0]->dtmf, array("1"));
-	  $eventhandler->onprompt = function ($prompts) use (&$order) {
-	    $this->assertEquals($prompts[0]->audios[0],"http://example.org/prompts/EKENE/en/welcome.wav");
-	    $this->assertEquals($order,4);
-
-	  };
-	  return $options[0]->dtmf;
-	};
-      };      
-      return null;
-    };
-
-    $this->vxml->callback = $eventhandler;
     $xml = file_get_contents("tests/test.vxml");
     $this->assertTrue($this->vxml->load($xml, "http://example.org/"));
-    $this->vxml->read();
-  }
+    $gen = $this->vxml->read(); 
+    $io = $gen->current();
+    $this->assertEquals($io->texts[0], "Please tell us who you are");
+    $io = $gen->send(null);
+    $this->assertEquals($io, "record");
+    $io = $gen->send(new VoiceXMLAudioRecord("tests/test.wav", 15000));
+    $this->assertEquals($io->texts[0], "DEFAULT Too long");
+    $io = $gen->send(null);
+    $this->assertEquals($io->texts[0], "Please tell us who you are");
+    $io = $gen->send(null);
+    $this->assertEquals($io, "record");
 
+    $io = $gen->send(new VoiceXMLAudioRecord("tests/test.wav", 5000));
+    $this->assertEquals($io->texts[0], "Please select what you to want to hear next");
+    $io = $gen->send(null);
+    $this->assertEquals($io[0]->label, "Listen to Ekene");
+    $this->assertEquals($io[0]->dtmf, array("1"));
+    $io = $gen->send($io[0]->dtmf);
+    $io = $gen->send(null);
+    $this->assertEquals($io->audios[0], "http://example.org/prompts/EKENE/en/welcome.wav");
+  }
 }

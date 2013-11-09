@@ -1,6 +1,6 @@
 <?php
 namespace VoiceBrowser;
-use VoiceBrowser\Exception\VoiceXMLDisconnectException, VoiceBrowser\Exception\VoiceXMLErrorEvent;
+use VoiceBrowser\Exception\VoiceXMLDisconnectException, VoiceBrowser\Exception\VoiceXMLErrorEvent, VoiceBrowser\Value;
 
 class VoiceXMLFormItem {
   protected $xml;
@@ -58,7 +58,7 @@ class VoiceXMLFormItem {
     }
   }
 
-  public function collect(&$eventhandler) {
+  public function collect() {
     $this->xmlreader->xml($this->xml);
     while($this->xmlreader->read()) {
       if ($this->xmlreader->nodeType == \XMLReader::ELEMENT) {
@@ -120,52 +120,67 @@ class VoiceXMLFormItem {
 	}
       }
     }
-    $eventhandler->onprompt($this->prompts);
-    return $this->_processInput($eventhandler);
+    foreach($this->prompts as $p) {
+      $ret = (yield $p);
+    }
+    $inputGenerator = $this->_processInput();
+    while (TRUE) {
+      $input = $inputGenerator->current();
+      $val = (yield $input);
+      $inputGenerator->send($val);
+    }
   }
 
-  private function _processEvent(&$eventhandler, $type) {
-    
+  private function _processEvent( $type) {
     $prompts = $this->eventCatcher[$type]->prompts;
     if ($this->eventCatcher[$type]->reprompt) {
       $prompts = array_merge($prompts, $this->prompts);
     } else if ($this->eventCatcher[$type]->exit) {
       throw new Exception\VoiceXMLDisconnectException();
-      }
-    call_user_func_array(array($eventhandler, "on" . $type), array());
-    $eventhandler->onprompt($prompts);
+    }
+    foreach($prompts as $p) {
+      yield $p;
+    }
     $this->repromptCounter++;
     if ($this->repromptCounter < VoiceBrowser::$maxReprompts) {
-      return $this->_processInput($eventhandler);
+      yield $this->_processInput()->current();
     } else {
       throw new VoiceXMLDisconnectException();
     }
   }
 
-  private function _processInput(&$eventhandler) {
-    if (!$this->expectsInput) {
-      return TRUE;
-    }
+  private function _processInput() {
     if (count($this->options)) {
-      $input = $eventhandler->onoption($this->options);
+      $input = (yield $this->options);
       if ($input === null) {
-	return $this->_processEvent($eventhandler, "noinput");
+	yield $this->_processEvent("noinput")->current();
       } else if (!in_array($input, array_map(function ($op) { return $op->dtmf;}, $this->options))) {
-	return $this->_processEvent($eventhandler, "nomatch");
+	yield $this->_processEvent("nomatch")->current();
       }
       //    $this->promptCounter++;
       $selectedOptionIndex = array_search($input, array_map(function ($op) { return $op->dtmf;}, $this->options));
-      return $this->options[$selectedOptionIndex]->value;
+      yield new Value($this->options[$selectedOptionIndex]->value);
     } else { 
-      $record = $eventhandler->onrecord();
+      $record = (yield "record");
       if ($record === null) {
-	return $this->_processEvent($eventhandler, "noinput");
+	$eventGenerator = $this->_processEvent("noinput");
+	while (TRUE) {
+	  $input = $eventGenerator->current();
+	  $val = (yield $input);
+	  $eventGenerator->send($val);
+	}	
       } else if ($record->length > $this->maxrecordtime) {
-	return $this->_processEvent($eventhandler, "maxspeechtimeout");
+	$eventGenerator = $this->_processEvent("maxspeechtimeout");
+	while (TRUE) {
+	  $input = $eventGenerator->current();
+	  $val = (yield $input);
+	  $eventGenerator->send($val);
+	}	
       }
-      return $record;
+      yield new Value($record);
     }
   }
+
 
   public function execute($variables) {
     $next = new VoiceXMLNext($variables);

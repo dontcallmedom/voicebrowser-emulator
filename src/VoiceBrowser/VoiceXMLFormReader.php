@@ -24,7 +24,7 @@ class VoiceXMLFormReader {
     $this->xml = $xml;
   }
 
-  public function process($callback) {
+  public function process() {
     $this->_formInit();
     $this->xmlreader = new \XMLReader();
     $this->xmlreader->xml($this->xml);
@@ -34,9 +34,18 @@ class VoiceXMLFormReader {
 	break;
       }
       try {
-	$value = $formitem->collect($callback);
-	if ($formitem->name)  {
-	  $this->variables[$formitem->name] = $value;
+	$collector = $formitem->collect();
+	while ($value = $collector->current()) {
+	  if (is_object($value) && get_class($value)=="VoiceBrowser\\Value") {
+	    if ($formitem->name)  {
+	      $this->variables[$formitem->name] = $value;
+	    }
+	    $io = (yield $value);
+	    $collector->next();
+	  } else {
+	    $io = (yield $value);
+	    $collector->send($io);
+	  }
 	}
       } catch (VoiceXMLDisconnectException $e) {
 	// TODO: handle connection.disconnect.hangup event
@@ -101,9 +110,6 @@ class VoiceXMLFormReader {
       }
     }
     return null;
-  }
-
-  private function _formProcess() {
   }
 
 }

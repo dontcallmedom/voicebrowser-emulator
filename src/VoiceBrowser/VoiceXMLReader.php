@@ -40,9 +40,17 @@ class VoiceXMLReader {
 	case "vxml":
 	case "var":
 	case "property":
-	case "form":
 	case "disconnect":
 	  call_user_func_array(array($this,'_read' . ucfirst($this->xmlreader->name)), array());
+	  break;
+	case "form":
+	  $readForm = $this->_readForm();
+	  while ($io = $readForm->current()) {
+	    $val = (yield $io);
+	    $readForm->send($val);
+	  }
+	  $this->xmlreader->next();
+
 	  break;
 	default:
 	  throw new UnhandledVoiceXML('Cannot handle element '.$this->xmlreader->name);
@@ -75,11 +83,11 @@ class VoiceXMLReader {
     $xml = $this->xmlreader->readOuterXML();
     $form = new VoiceXMLFormReader($this->variables);
     $form->loadFromXML($xml);
-    $next = $form->process($this->callback);
-    if ($next !== null && $next->url) {
-      VoiceBrowser::fetch($next->url, $next->method, $next->params);
+    $process = $form->process();
+    while ($io = $process->current()) {
+      $val = (yield $io);
+      $process->send($val);
     }
-    $this->xmlreader->next();
   }  
 }
 
