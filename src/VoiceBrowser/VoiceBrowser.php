@@ -10,6 +10,8 @@ final class VoiceBrowser {
   protected static $fileuploadPathFilter;
   protected static $vxml;
 
+  protected static $reading = false;
+  protected static $readGenerator;
 
   public static function setUrl($url) {
     self::$url = $url;
@@ -186,8 +188,13 @@ final class VoiceBrowser {
       return self::$vxml->load($response->getBody(), $url);
     }
     
-    public static function play() {
-      self::$vxml->read();
+    public static function play($input = null) {
+      if (!self::$reading) {
+	self::$readGenerator = self::$vxml->read();
+	yield self::$readGenerator->current();
+      } else {
+	yield self::$readGenerator->send($input);
+      }
     }
 }
 
