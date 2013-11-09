@@ -1,6 +1,6 @@
 <?php
 namespace VoiceBrowser;
-use VoiceBrowser\Exception\InvalidVoiceXML, VoiceBrowser\Exception\UnhandledVoiceXML, VoiceBrowser\Exception\VoiceXMLErrorEvent;
+use VoiceBrowser\Exception\InvalidVoiceXML, VoiceBrowser\Exception\UnhandledVoiceXML, VoiceBrowser\Exception\VoiceXMLErrorEvent, VoiceBrowser\VoiceXMLFormReader;
 
 class VoiceXMLReader {
   protected $xmlreader;
