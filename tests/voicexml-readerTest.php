@@ -55,7 +55,6 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
 
   /**
    * @covers VoiceXMLReader::load
-   * @expectedException VoiceBrowser\Exception\VoiceXMLDisconnectException
    */
   public function testLoadingXMLWorks()
   {

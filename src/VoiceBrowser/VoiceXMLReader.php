@@ -77,7 +77,7 @@ class VoiceXMLReader {
     $form->loadFromXML($xml);
     $next = $form->process($this->callback);
     if ($next !== null && $next->url) {
-
+      VoiceBrowser::fetch($next->url, $next->method, $next->params);
     }
     $this->xmlreader->next();
   }  
