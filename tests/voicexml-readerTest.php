@@ -73,7 +73,6 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   }
   /**
    *  @covers VoiceXMLReader::load
-   *  @expectedException VoiceBrowser\Exception\VoiceXMLErrorEvent
    */
   public function testFormInteraction() {
     $xml = file_get_contents("tests/test.vxml");
@@ -95,8 +94,7 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
     $io = $gen->send(null);
     $this->assertEquals($io[0]->label, "Listen to Ekene");
     $this->assertEquals($io[0]->dtmf, array("1"));
-    $io = $gen->send($io[0]->dtmf);
-    $io = $gen->send(null);
+    $io = $gen->send($io[1]->dtmf);
     $this->assertEquals($io->audios[0], "http://example.org/prompts/EKENE/en/welcome.wav");
   }
 }
