@@ -82,6 +82,10 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
     $this->assertEquals($io->texts[0], "Please tell us who you are");
     $io = $gen->send(null);
     $this->assertEquals($io, "record");
+    $io = $gen->send(null);
+    $this->assertEquals($io->texts[0], "So, who are you?");
+    $io = $gen->send(null);
+    $this->assertEquals($io, "record");
     $io = $gen->send(new VoiceXMLAudioRecord("tests/test.wav", 15000));
     $this->assertEquals($io->texts[0], "DEFAULT Too long");
     $io = $gen->send(null);
