@@ -160,7 +160,7 @@ class VoiceXMLFormItem {
       //    $this->promptCounter++;
       $selectedOptionIndex = array_search($input, array_map(function ($op) { return $op->dtmf;}, $this->options));
       yield new Value($this->options[$selectedOptionIndex]->value);
-    } else { 
+    } else if ($this->expectsInput) { 
       $record = (yield "record");
       if ($record === null) {
 	$eventGenerator = $this->_processEvent("noinput");
