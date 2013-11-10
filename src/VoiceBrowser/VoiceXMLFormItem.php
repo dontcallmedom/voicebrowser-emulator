@@ -43,6 +43,7 @@ class VoiceXMLFormItem {
     $this->xmlreader = new \XMLReader();
     $this->xmlreader->xml($this->xml);
     while($this->xmlreader->read()) {
+      $this->expectsInput = false;
       if ($this->xmlreader->nodeType == \XMLReader::ELEMENT) {
 	switch($this->xmlreader->name) {
 	case "field":

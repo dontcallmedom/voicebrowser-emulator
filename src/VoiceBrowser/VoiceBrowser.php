@@ -151,6 +151,7 @@ final class VoiceBrowser {
     }
 
     public static function fetch($url, $method, $params, &$client = null) {
+      self::$reading = false;
       if ($client == null) {
 	$client = new \Guzzle\Http\Client();
       }
@@ -189,11 +190,12 @@ final class VoiceBrowser {
     }
     
     public static function play($input = null) {
-      if (!self::$reading) {
-	self::$readGenerator = self::$vxml->read();
-	yield self::$readGenerator->current();
-      } else {
-	yield self::$readGenerator->send($input);
+      self::$readGenerator = self::$vxml->read();
+      while (TRUE) {
+	if (!self::$readGenerator->valid()) break;
+	$io = self::$readGenerator->current();
+	yield $io;
+	self::$readGenerator->send($input);
       }
     }
 }
