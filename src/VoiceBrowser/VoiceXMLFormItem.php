@@ -125,6 +125,7 @@ class VoiceXMLFormItem {
     }
     $inputGenerator = $this->_processInput();
     while (TRUE) {
+      if (!$inputGenerator->valid()) break;
       $input = $inputGenerator->current();
       $val = (yield $input);
       $inputGenerator->send($val);
@@ -143,7 +144,12 @@ class VoiceXMLFormItem {
     }
     $this->repromptCounter++;
     if ($this->repromptCounter < VoiceBrowser::$maxReprompts) {
-      yield $this->_processInput()->current();
+      while (TRUE) {
+	if (!$inputGenerator->valid()) break;
+	$input = $inputGenerator->current();
+	$val = (yield $input);
+	$inputGenerator->send($val);
+      }
     } else {
       throw new VoiceXMLDisconnectException();
     }
@@ -165,6 +171,7 @@ class VoiceXMLFormItem {
       if ($record === null) {
 	$eventGenerator = $this->_processEvent("noinput");
 	while (TRUE) {
+	  if (!$eventGenerator->valid()) break;
 	  $input = $eventGenerator->current();
 	  $val = (yield $input);
 	  $eventGenerator->send($val);
@@ -172,6 +179,7 @@ class VoiceXMLFormItem {
       } else if ($record->length > $this->maxrecordtime) {
 	$eventGenerator = $this->_processEvent("maxspeechtimeout");
 	while (TRUE) {
+	  if (!$eventGenerator->valid()) break;
 	  $input = $eventGenerator->current();
 	  $val = (yield $input);
 	  $eventGenerator->send($val);
