@@ -1,7 +1,7 @@
 <?php
 
 use VoiceBrowser\VoiceBrowser, VoiceBrowser\Undefined, VoiceBrowser\VoiceXMLReader, VoiceBrowser\VoiceXMLEventHandler, VoiceBrowser\VoiceXMLAudioRecord;
-use VoiceBrowser\InvalidVoiceXMLException;
+use VoiceBrowser\InvalidVoiceXMLException, VoiceBrowser\Exception\VoiceXMLErrorEvent;
 
 class VoiceBrowserTest extends PHPUnit_Framework_TestCase {
   public function testReadExpr() {
@@ -73,6 +73,7 @@ class VoiceXMLReaderTest extends PHPUnit_Framework_TestCase {
   }
   /**
    *  @covers VoiceXMLReader::load
+   *  @expectedException VoiceBrowser\Exception\VoiceXMLErrorEvent
    */
   public function testFormInteraction() {
     $xml = file_get_contents("tests/test.vxml");

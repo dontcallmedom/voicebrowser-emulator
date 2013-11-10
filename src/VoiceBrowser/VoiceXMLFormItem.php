@@ -144,6 +144,7 @@ class VoiceXMLFormItem {
     }
     $this->repromptCounter++;
     if ($this->repromptCounter < VoiceBrowser::$maxReprompts) {
+      $inputGenerator = $this->_processInput();
       while (TRUE) {
 	if (!$inputGenerator->valid()) break;
 	$input = $inputGenerator->current();
