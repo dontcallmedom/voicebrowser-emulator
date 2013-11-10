@@ -160,9 +160,21 @@ class VoiceXMLFormItem {
     if (count($this->options)) {
       $input = (yield $this->options);
       if ($input === null) {
-	yield $this->_processEvent("noinput")->current();
+	$eventGenerator = $this->_processEvent("noinput");
+	while (TRUE) {
+	  if (!$eventGenerator->valid()) break;
+	  $input = $eventGenerator->current();
+	  $val = (yield $input);
+	  $eventGenerator->send($val);
+	}	
       } else if (!in_array($input, array_map(function ($op) { return $op->dtmf;}, $this->options))) {
-	yield $this->_processEvent("nomatch")->current();
+	$eventGenerator = $this->_processEvent("nomatch");
+	while (TRUE) {
+	  if (!$eventGenerator->valid()) break;
+	  $input = $eventGenerator->current();
+	  $val = (yield $input);
+	  $eventGenerator->send($val);
+	}	
       }
       //    $this->promptCounter++;
       $selectedOptionIndex = array_search($input, array_map(function ($op) { return $op->dtmf;}, $this->options));
