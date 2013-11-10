@@ -35,7 +35,9 @@ class VoiceXMLFormReader {
       }
       try {
 	$collector = $formitem->collect();
-	while ($value = $collector->current()) {
+	while (TRUE) {
+	  if (!$collector->valid()) break;
+	  $value = $collector->current();
 	  if (is_object($value) && get_class($value)=="VoiceBrowser\\Value") {
 	    if ($formitem->name)  {
 	      $this->variables[$formitem->name] = $value->value;

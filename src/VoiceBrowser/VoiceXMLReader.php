@@ -45,7 +45,9 @@ class VoiceXMLReader {
 	  break;
 	case "form":
 	  $readForm = $this->_readForm();
-	  while ($io = $readForm->current()) {
+	  while (TRUE) {
+	    if (!$readForm->valid()) break;
+	    $io = $readForm->current();
 	    $val = (yield $io);
 	    $readForm->send($val);
 	  }
@@ -84,7 +86,9 @@ class VoiceXMLReader {
     $form = new VoiceXMLFormReader($this->variables);
     $form->loadFromXML($xml);
     $process = $form->process();
-    while ($io = $process->current()) {
+    while (TRUE) {
+      if (!$process->valid()) break;
+      $io = $process->current();
       $val = (yield $io);
       $process->send($val);
     }
