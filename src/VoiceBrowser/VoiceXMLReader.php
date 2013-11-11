@@ -19,7 +19,7 @@ class VoiceXMLReader {
 
   public function load($content, $url = null) {
     $this->xmlreader->xml($content);
-    $this->xmlreader->setRelaxNGSchema('vxml.rng');
+    $this->xmlreader->setRelaxNGSchema(__DIR__.'/vxml.rng');
     $this->url = $url;
     VoiceBrowser::setUrl($url);
 
