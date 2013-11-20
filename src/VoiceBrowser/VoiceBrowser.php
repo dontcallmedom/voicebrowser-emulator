@@ -10,11 +10,17 @@ final class VoiceBrowser {
   protected static $fileuploadPathFilter;
   protected static $vxml;
 
+  protected static $callerid = "3668225563366";
+
   protected static $reading = false;
   protected static $readGenerator;
 
   public static function setUrl($url) {
     self::$url = $url;
+  }
+
+  public static function setCallerid($callerid) {
+    self::$callerid = $callerid;
   }
 
   public static function setUploadFilter($filter) {
@@ -31,6 +37,8 @@ final class VoiceBrowser {
       $varValue = substr($varValue,1,strlen($varValue) - 2);
     } elseif (is_numeric($varValue)) {
       $varValue = (int)$varValue;
+    } else if ($varValue === "session.connection.originator.uri") {
+      $varValue = self::$callerid;
     } else {
       throw new UnhandledVoiceXMLException('cannot handle attribute expr with values that are not string or number: '.$varValue );
     }
@@ -155,6 +163,8 @@ final class VoiceBrowser {
       if ($client == null) {
 	$client = new \Guzzle\Http\Client();
       }
+      $client->setUserAgent("voicebrowser-emulator https://github.com/dontcallmedom/voicebrowser-emulator", true);
+      $headers = array("MSISDN"=>self::$callerid);
       if ($method == "GET") {
 	$req = $client->get($url, array(), null, array("query" => $params));
       } else {
